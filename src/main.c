@@ -11,7 +11,7 @@
 
 #include <gif_lib.h>
 
-#define SOBELF_DEBUG 0
+#define SOBELF_DEBUG 1
 
 /* Represent one pixel from the image */
 typedef struct pixel
@@ -48,6 +48,8 @@ load_pixels( char * filename )
     pixel ** p ;
     int i ;
     animated_gif * image ;
+    struct timeval t0, t1, t2, tf; //added for time checking
+    double duration; //added for time checking
 
     /* Open the GIF image (read mode) */
     g = DGifOpenFileName( filename, &error ) ;
@@ -86,13 +88,19 @@ load_pixels( char * filename )
     }
 
     /* Fill the width and height */
+    #if SOBELF_DEBUG 
+        gettimeofday(&t0, NULL); //added for time checking
+    #endif
     for ( i = 0 ; i < n_images ; i++ ) 
-    {
+    {   /*
+        #if SOBELF_DEBUG 
+            gettimeofday(&t1, NULL); 
+        #endif */
         width[i] = g->SavedImages[i].ImageDesc.Width ;
         height[i] = g->SavedImages[i].ImageDesc.Height ;
-
 #if SOBELF_DEBUG
-        printf( "Image %d: l:%d t:%d w:%d h:%d interlace:%d localCM:%p\n",
+        gettimeofday(&t2, NULL); //added for time checking
+        printf( "[DEBUG] Image %d: l:%d t:%d w:%d h:%d interlace:%d localCM:%p\n",
                 i, 
                 g->SavedImages[i].ImageDesc.Left,
                 g->SavedImages[i].ImageDesc.Top,
@@ -101,9 +109,15 @@ load_pixels( char * filename )
                 g->SavedImages[i].ImageDesc.Interlace,
                 g->SavedImages[i].ImageDesc.ColorMap
                 ) ;
+        /* duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+        printf( "[DEBUG]Time needed to fill width and height of image %d: %lf s\n", i,  duration); */
 #endif
     }
-
+#if SOBELF_DEBUG
+    gettimeofday(&tf, NULL); //added for time checking
+    duration = (tf.tv_sec -t0.tv_sec)+((tf.tv_usec-t0.tv_usec)/1e6);
+    printf( "[DEBUG]Time needed to fill width and height of all images: %lf s\n",  duration);
+#endif
 
     /* Get the global colormap */
     colmap = g->SColorMap ;
@@ -142,6 +156,9 @@ load_pixels( char * filename )
     }
     
     /* Fill pixels */
+    #if SOBELF_DEBUG
+        gettimeofday(&t1, NULL);
+    #endif
 
     /* For each image */
     for ( i = 0 ; i < n_images ; i++ )
@@ -171,6 +188,11 @@ load_pixels( char * filename )
             p[i][j].b = colmap->Colors[c].Blue ;
         }
     }
+    #if SOBELF_DEBUG
+        gettimeofday(&t2, NULL);
+        duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+        printf( "[DEBUG] Time needed to fill all the pixels: %lf s\n",  duration);
+    #endif
 
     /* Allocate image info */
     image = (animated_gif *)malloc( sizeof(animated_gif) ) ;
@@ -581,6 +603,12 @@ apply_gray_filter( animated_gif * image )
 
     p = image->p ;
 
+    #if SOBELF_DEBUG
+        struct timeval t0, t1, t2, tf; //added for time checking
+        double duration; //added for time checking
+        gettimeofday(&t1, NULL);
+    #endif
+
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
@@ -597,6 +625,11 @@ apply_gray_filter( animated_gif * image )
             p[i][j].b = moy ;
         }
     }
+    #if SOBELF_DEBUG
+        gettimeofday(&t2, NULL);
+        duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+        printf( "[DEBUG] Time needed to apply grey filter to all the images: %lf s\n",  duration);
+    #endif
 }
 
 #define CONV(l,c,nb_c) \
