@@ -11,5 +11,6 @@ for i in $INPUT_DIR/*gif ; do
     echo "=====START====="
     echo "Running test on $i -> $DEST"
 
-    ./sobelf $i $DEST
+    #./sobelf $i $DEST
+    salloc -n 1 ./sobelf $i $DEST
 done
