@@ -16,6 +16,7 @@
 #define SOBELF_DEBUG 1
 
 #if SOBELF_DEBUG
+    #define FILE_NAME "./logs_plots/plog1.txt"
     FILE *fOut;
 
 void writeNumToLog(double n){
@@ -900,7 +901,7 @@ int main( int argc, char ** argv )
 
     /*Open perfomance log file for debug*/
     #if SOBELF_DEBUG
-        fOut = fopen("plog.txt","a");
+        fOut = fopen(FILE_NAME,"a");
     #endif
 
     /* IMPORT Timer start */
