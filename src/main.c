@@ -8,8 +8,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
-
 #include <gif_lib.h>
+#include <stdbool.h>
+
+#include <omp.h>
 
 #define SOBELF_DEBUG 1
 
@@ -161,9 +163,11 @@ load_pixels( char * filename )
     #endif
 
     /* For each image */
+    #pragma omp parallel for shared(p) schedule(dynamic)
     for ( i = 0 ; i < n_images ; i++ )
     {
         int j ;
+        bool ok = true;
 
         /* Get the local colormap if needed */
         if ( g->SavedImages[i].ImageDesc.ColorMap )
@@ -171,13 +175,14 @@ load_pixels( char * filename )
 
             /* TODO No support for local color map */
             fprintf( stderr, "Error: application does not support local colormap\n" ) ;
-            return NULL ;
+            //return NULL ;
+            ok = false;
 
-            colmap = g->SavedImages[i].ImageDesc.ColorMap ;
+            if(ok) colmap = g->SavedImages[i].ImageDesc.ColorMap ;
         }
 
         /* Traverse the image and fill pixels */
-        for ( j = 0 ; j < width[i] * height[i] ; j++ ) 
+        for ( j = 0 ; (j < width[i] * height[i]) && ok ; j++ ) 
         {
             int c ;
 

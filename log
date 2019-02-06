@@ -1,0 +1,7 @@
+Original version:
+[DEBUG] Time needed to fill all the pixels: 0.011786 s
+
+Simple OpenMP parallel for:
+[DEBUG] Time needed to fill all the pixels: 0.008096 s
+- static scheduling: [DEBUG] Time needed to fill all the pixels: 0.008520 s
+- dynamic scheduling: [DEBUG] Time needed to fill all the pixels: 0.004673 s
