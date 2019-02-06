@@ -15,6 +15,15 @@
 
 #define SOBELF_DEBUG 1
 
+#if SOBELF_DEBUG
+    FILE *fOut;
+
+void writeNumToLog(double n){
+    fprintf(fOut, "%lf\n", n);
+}
+
+#endif
+
 /* Represent one pixel from the image */
 typedef struct pixel
 {
@@ -162,13 +171,13 @@ load_pixels( char * filename )
         gettimeofday(&t1, NULL);
     #endif
 
+    bool ok = true;
+    int j = 0;
     /* For each image */
-    #pragma omp parallel for shared(p) schedule(dynamic)
+    #pragma omp parallel for shared(p) firstprivate(ok, j) schedule(dynamic)
     for ( i = 0 ; i < n_images ; i++ )
     {
-        int j ;
-        bool ok = true;
-
+        
         /* Get the local colormap if needed */
         if ( g->SavedImages[i].ImageDesc.ColorMap )
         {
@@ -197,6 +206,7 @@ load_pixels( char * filename )
         gettimeofday(&t2, NULL);
         duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
         printf( "[DEBUG] Time needed to fill all the pixels: %lf s\n",  duration);
+        writeNumToLog(duration);
     #endif
 
     /* Allocate image info */
@@ -888,6 +898,11 @@ int main( int argc, char ** argv )
     input_filename = argv[1] ;
     output_filename = argv[2] ;
 
+    /*Open perfomance log file for debug*/
+    #if SOBELF_DEBUG
+        fOut = fopen("plog.txt","a");
+    #endif
+
     /* IMPORT Timer start */
     gettimeofday(&t1, NULL);
 
@@ -934,6 +949,11 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "Export done in %lf s in file %s\n", duration, output_filename ) ;
+
+    /*Close perfomance log file*/
+    #if SOBELF_DEBUG
+        fclose(fOut);
+    #endif
 
     return 0 ;
 }
