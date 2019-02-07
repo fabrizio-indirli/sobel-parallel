@@ -16,6 +16,8 @@ for i in range(len(l0)):
 
 print("Total time difference is: ", totDiff, " s")
 print("Average speedup is: ", sum(speedups)/float(len(speedups)))
+print("Total speedup is: ", sum(l0)/sum(l1))
+
 plt.bar(range(len(l0)), diffs)
 plt.xlabel("Input file id")
 plt.ylabel("Execution time difference")
