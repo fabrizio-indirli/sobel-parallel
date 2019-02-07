@@ -807,13 +807,26 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
 
 }
 
-void apply_sobel_filter(int width, int height, pixel * pi){
-    /*This version of the sobel filter works only on one image at a time*/
-    int j, k;
-    pixel * sobel ;
-    sobel = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
+void
+apply_sobel_filter( animated_gif * image )
+{
+    int i, j, k ;
+    int width, height ;
 
-    for(j=1; j<height-1; j++)
+    pixel ** p ;
+
+    p = image->p ;
+
+    for ( i = 0 ; i < image->n_images ; i++ )
+    {
+        width = image->width[i] ;
+        height = image->height[i] ;
+
+        pixel * sobel ;
+
+        sobel = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
+
+        for(j=1; j<height-1; j++)
         {
             for(k=1; k<width-1; k++)
             {
@@ -825,15 +838,15 @@ void apply_sobel_filter(int width, int height, pixel * pi){
                 float deltaY_blue ;
                 float val_blue;
 
-                pixel_blue_no = pi[CONV(j-1,k-1,width)].b ;
-                pixel_blue_n  = pi[CONV(j-1,k  ,width)].b ;
-                pixel_blue_ne = pi[CONV(j-1,k+1,width)].b ;
-                pixel_blue_so = pi[CONV(j+1,k-1,width)].b ;
-                pixel_blue_s  = pi[CONV(j+1,k  ,width)].b ;
-                pixel_blue_se = pi[CONV(j+1,k+1,width)].b ;
-                pixel_blue_o  = pi[CONV(j  ,k-1,width)].b ;
-                pixel_blue    = pi[CONV(j  ,k  ,width)].b ;
-                pixel_blue_e  = pi[CONV(j  ,k+1,width)].b ;
+                pixel_blue_no = p[i][CONV(j-1,k-1,width)].b ;
+                pixel_blue_n  = p[i][CONV(j-1,k  ,width)].b ;
+                pixel_blue_ne = p[i][CONV(j-1,k+1,width)].b ;
+                pixel_blue_so = p[i][CONV(j+1,k-1,width)].b ;
+                pixel_blue_s  = p[i][CONV(j+1,k  ,width)].b ;
+                pixel_blue_se = p[i][CONV(j+1,k+1,width)].b ;
+                pixel_blue_o  = p[i][CONV(j  ,k-1,width)].b ;
+                pixel_blue    = p[i][CONV(j  ,k  ,width)].b ;
+                pixel_blue_e  = p[i][CONV(j  ,k+1,width)].b ;
 
                 deltaX_blue = -pixel_blue_no + pixel_blue_ne - 2*pixel_blue_o + 2*pixel_blue_e - pixel_blue_so + pixel_blue_se;             
 
@@ -860,13 +873,14 @@ void apply_sobel_filter(int width, int height, pixel * pi){
         {
             for(k=1; k<width-1; k++)
             {
-                pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
-                pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
-                pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+                p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+                p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+                p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
             }
         }
 
         free (sobel) ;
+    }
 
 }
 
@@ -917,24 +931,8 @@ int main( int argc, char ** argv )
     /* Apply blur filter with convergence value */
     apply_blur_filter( image, 5, 20 ) ;
 
-    /***** Start of parallelized version of filters *****/
-    int i;
-    int width, height ;
-
-    pixel ** p ;
-
-    p = image->p ;
-
-    for ( i = 0 ; i < image->n_images ; i++ )
-    {
-        width = image->width[i] ;
-        height = image->height[i] ;
-        pixel * pi = p[i];
-
-        /* Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
-    }
-    /***** End of parallelized version of filters *****/
+    /* Apply sobel filter on pixels */
+    apply_sobel_filter( image ) ;
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
@@ -942,9 +940,6 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "SOBEL done in %lf s\n", duration ) ;
-
-
-
 
     /* EXPORT Timer start */
     gettimeofday(&t1, NULL);
