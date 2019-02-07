@@ -17,7 +17,7 @@
 #include "blur_filter.h"
 #include "sobel_filter.h"
 
-#define SOBELF_DEBUG 0
+#define SOBELF_DEBUG 1
 #define LOGGING 1
 
 #if LOGGING
