@@ -686,7 +686,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
             /* Apply blur on top part of image (10%) */
             #pragma omp parallel default(none) private(j,k) shared(i,size,threshold,width,height,p,new,end) //***
             {
-                #pragma omp for schedule(static,width) 
+                #pragma omp for collapse(2) schedule(static,width) 
                 for(j=size; j<height/10-size; j++) //*** 10 -> 3
                 {
                     // printf("> GRAY FILTER > Thread %d running iteration %d\n", omp_get_thread_num(), i);
@@ -714,8 +714,8 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 } // barrier...
 
                 /* Copy the middle part of the image */
-                int j_cond = height*0.9+size;
-                #pragma omp for schedule(static,width) 
+                int j_cond = height*0.9+size; // cannot calculate inside the condition
+                #pragma omp for collapse(2) schedule(static,width) 
                 for(j=height/10-size; j<j_cond; j++) //*** 10 -> 3
                 {
                     for(k=size; k<width-size; k++)
@@ -727,7 +727,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 }
 
                 /* Apply blur on the bottom part of the image (10%) */
-                #pragma omp for schedule(static,width) 
+                #pragma omp for collapse(2) schedule(static,width) 
                 for(j=height*0.9+size; j<height-size; j++)
                 {
                     for(k=size; k<width-size; k++)
@@ -754,7 +754,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 }
 
                 //** check Threshold
-                #pragma omp for schedule(static,width) 
+                #pragma omp for collapse(2) schedule(static,width) 
                 for(j=1; j<height-1; j++)
                 {
                     for(k=1; k<width-1; k++)
