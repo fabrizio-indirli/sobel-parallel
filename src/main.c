@@ -12,6 +12,16 @@
 #include <gif_lib.h>
 
 #define SOBELF_DEBUG 0
+#define LOGGING 1
+
+#if LOGGING
+    #define FILE_NAME "./logs_plots/write_plog0.txt"
+    FILE *fOut;
+
+void writeNumToLog(double n){
+    fprintf(fOut, "%lf\n", n);
+}
+#endif
 
 /* Represent one pixel from the image */
 typedef struct pixel
@@ -850,6 +860,11 @@ int main( int argc, char ** argv )
     input_filename = argv[1] ;
     output_filename = argv[2] ;
 
+    /*Open perfomance log file for debug*/
+    #if LOGGING
+        fOut = fopen(FILE_NAME,"a");
+    #endif
+
     /* IMPORT Timer start */
     gettimeofday(&t1, NULL);
 
@@ -896,6 +911,15 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "Export done in %lf s in file %s\n", duration, output_filename ) ;
+
+    #if LOGGING
+        writeNumToLog(duration);
+    #endif
+
+    /*Close perfomance log file*/
+    #if LOGGING
+        fclose(fOut);
+    #endif
 
     return 0 ;
 }
