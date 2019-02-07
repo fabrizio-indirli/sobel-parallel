@@ -612,18 +612,26 @@ apply_gray_filter( animated_gif * image )
 
     for ( i = 0 ; i < image->n_images ; i++ )
     {
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
+        int width = image->width[i];
+        int height = image->height[i];
+        int image_size = width * height;
+        #pragma omp parallel default(none) private(j) shared(i,p,width,height,image_size)
         {
-            int moy ;
+            #pragma omp for schedule(static) //*** default chunk size
+            for ( j = 0 ; j < image_size; j++ )
+            {
+                // printf("iter: \t%d from %d Thr\n", j, omp_get_thread_num());
+                int moy ;
 
-            // moy = p[i][j].r/4 + ( p[i][j].g * 3/4 ) ;
-            moy = (p[i][j].r + p[i][j].g + p[i][j].b)/3 ;
-            if ( moy < 0 ) moy = 0 ;
-            if ( moy > 255 ) moy = 255 ;
+                // moy = p[i][j].r/4 + ( p[i][j].g * 3/4 ) ;
+                moy = (p[i][j].r + p[i][j].g + p[i][j].b)/3 ;
+                if ( moy < 0 ) moy = 0 ;
+                if ( moy > 255 ) moy = 255 ;
 
-            p[i][j].r = moy ;
-            p[i][j].g = moy ;
-            p[i][j].b = moy ;
+                p[i][j].r = moy ;
+                p[i][j].g = moy ;
+                p[i][j].b = moy ;
+            }
         }
     }
 }
@@ -786,7 +794,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
         }
         while ( threshold > 0 && !end ) ;
 
-        // printf( "Nb iter for image %d\n", n_iter ) ;
+        // printf( "Nb iter for image %d\n", n_iter ) ;int i=0; i<N; i++)
 
         free (new) ;
     } // for ends
@@ -879,16 +887,27 @@ int main( int argc, char ** argv )
     struct timeval t1, t2;
     double duration ;
 
+    char * description;
+
     FILE *fptr;
 
     if ( argc < 3 )
     {
         fprintf( stderr, "Usage: %s input.gif output.gif \n", argv[0] ) ;
         return 1 ;
-    }
+    } 
 
     input_filename = argv[1] ;
     output_filename = argv[2] ;
+    
+    // *** Save result in `test_result.txt` file
+    fptr = fopen("test_result.txt", "a+"); // *.csv
+    if(fptr == NULL)
+    {
+        printf("Error!");
+        exit(1);
+    }
+
 
     /* IMPORT Timer start */
     gettimeofday(&t1, NULL);
@@ -904,14 +923,7 @@ int main( int argc, char ** argv )
 
     printf( "GIF loaded from file %s with %d image(s) in %lf s\n",
             input_filename, image->n_images, duration ) ;
-
-    // *** Save result in `test_result.txt` file
-    fptr = fopen("test_result.txt", "a+"); // *.csv
-    if(fptr == NULL)
-    {
-        printf("Error!");
-        exit(1);
-    }
+    fprintf(fptr,"\t %f", duration);
 
 
     /* FILTER Timer start */
