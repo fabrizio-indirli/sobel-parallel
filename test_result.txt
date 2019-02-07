@@ -231,3 +231,49 @@ images/original/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large.gif
 	 0.022934	 0.011797	 0.073517	 0.079826	 0.439532
 
 =====DONE=====
+images/original/051009.vince.gif
+	 0.015006	 0.000889	 0.058686	 0.063276	 0.290663
+
+images/original/1.gif
+	 0.022517	 0.001960	 0.086017	 0.092361	 0.199489
+
+images/original/200_s.gif
+	 0.000939	 0.001794	 0.002646	 0.002788	 0.001449
+
+images/original/9815573.gif
+	 0.016503	 0.003874	 0.032279	 0.041523	 0.103000
+
+images/original/australian-flag-large.gif
+	 0.005280	 0.000380	 0.034837	 0.037378	 0.029169
+
+images/original/Campusplan-Hausnr.gif
+	 0.369900	 0.057712	 2.788908	 3.025361	 0.794675
+
+images/original/Campusplan-Mobilitaetsbeschraenkte.gif
+	 0.379362	 0.057744	 2.655964	 2.887711	 2.731233
+
+images/original/fire.gif
+	 0.001251	 0.005180	 0.005420	 0.005661	 0.003046
+
+images/original/frame_002.gif
+	 0.002729	 0.000216	 0.007877	 0.008704	 0.004552
+
+images/original/giphy-3.gif
+	 0.102968	 0.012366	 0.284390	 0.321168	 1.303206
+
+images/original/Mandelbrot-large.gif
+	 0.196721	 0.024285	 0.519631	 0.631570	 3.229588
+
+images/original/porsche.gif
+	 0.000966	 0.000126	 0.000699	 0.000906	 0.001653
+
+images/original/Produits_sous_linux.gif
+	 0.006402	 0.000404	 0.036533	 0.048552	 0.011680
+
+images/original/TimelyHugeGnu.gif
+	 0.057511	 0.004326	 0.067351	 0.079027	 0.564548
+
+images/original/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large.gif
+	 0.022856	 0.001754	 0.061304	 0.066921	 0.627931
+
+=====DONE=====

@@ -722,7 +722,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 } // barrier...
 
                 /* Copy the middle part of the image */
-                int j_cond = height*0.9+size; // cannot calculate inside the condition
+                int j_cond = height*0.9+size; // cannot calculate it inside for loops
                 #pragma omp for collapse(2) schedule(static,width) 
                 for(j=height/10-size; j<j_cond; j++) //*** 10 -> 3
                 {
@@ -761,6 +761,71 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                     }
                 }
 
+
+                //*** Could it go inside blur filter? One problem is that it doesn't consider boundaries. 
+                //*** Check TOP
+                #pragma omp for collapse(2) schedule(static,width) 
+                for(j=1; j < height/10-size-1; ++j)
+                {
+                    for(k=1; k < width-1; ++k)
+                    {
+                        float diff_r ;
+                        float diff_g ;
+                        float diff_b ;
+
+                        diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+                        diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+                        diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+                        // if(j > height/10-size && j < j_cond)
+                        //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
+
+                        if ( diff_r > threshold || -diff_r > threshold
+                                ||
+                                diff_g > threshold || -diff_g > threshold
+                                ||
+                                diff_b > threshold || -diff_b > threshold
+                        ) {
+                            end = 0 ;
+                        }
+                        //*** otherwise, update p with new
+                        p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                        p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                        p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
+                    }
+                }
+
+                //*** Check bottom
+                #pragma omp for collapse(2) schedule(static,width) 
+                for(j=height*0.9+size+1; j < height-size-1; ++j)
+                {
+                    for(k=1; k < width-1; ++k)
+                    {
+                        float diff_r ;
+                        float diff_g ;
+                        float diff_b ;
+
+                        diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+                        diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+                        diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+                        // if(j > height/10-size && j < j_cond)
+                        //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
+
+                        if ( diff_r > threshold || -diff_r > threshold
+                                ||
+                                diff_g > threshold || -diff_g > threshold
+                                ||
+                                diff_b > threshold || -diff_b > threshold
+                        ) {
+                            end = 0 ;
+                        }
+                        //*** otherwise, update p with new
+                        p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                        p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                        p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
+                    }
+                }
+
+                /*
                 //** check Threshold
                 #pragma omp for collapse(2) schedule(static,width) 
                 for(j=1; j<height-1; j++)
@@ -775,6 +840,8 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                         diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
                         diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
                         diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+                        // if(j > height/10-size && j < j_cond)
+                        //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
 
                         if ( diff_r > threshold || -diff_r > threshold
                                 ||
@@ -784,12 +851,13 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                         ) {
                             end = 0 ;
                         }
-
+                        //*** otherwise, update p with new
                         p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
                         p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
                         p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
                     }
                 }
+                */
             } // #pragma omp parallel end
         }
         while ( threshold > 0 && !end ) ;
