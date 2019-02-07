@@ -879,6 +879,8 @@ int main( int argc, char ** argv )
     struct timeval t1, t2;
     double duration ;
 
+    FILE *fptr;
+
     if ( argc < 3 )
     {
         fprintf( stderr, "Usage: %s input.gif output.gif \n", argv[0] ) ;
@@ -903,8 +905,13 @@ int main( int argc, char ** argv )
     printf( "GIF loaded from file %s with %d image(s) in %lf s\n",
             input_filename, image->n_images, duration ) ;
 
-
-
+    // *** Save result in `test_result.txt` file
+    fptr = fopen("test_result.txt", "a+"); // *.csv
+    if(fptr == NULL)
+    {
+        printf("Error!");
+        exit(1);
+    }
 
 
     /* FILTER Timer start */
@@ -917,8 +924,7 @@ int main( int argc, char ** argv )
 
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "GRAY FILTER done in %lf s\n", duration ) ;
-
-
+    fprintf(fptr,"\t %f", duration);
 
 
 
@@ -929,7 +935,7 @@ int main( int argc, char ** argv )
 
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "BLUR FILTER done in %lf s\n", duration ) ;
-
+    fprintf(fptr,"\t %f", duration);
 
 
 
@@ -943,7 +949,7 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "SOBEL done in %lf s\n", duration ) ;
-
+    fprintf(fptr,"\t %f", duration);
 
 
 
@@ -960,7 +966,8 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "Export done in %lf s in file %s\n\n\n", duration, output_filename ) ;
-
+    fprintf(fptr,"\t %f\n\n", duration);
+    fclose(fptr);
 
 
 
