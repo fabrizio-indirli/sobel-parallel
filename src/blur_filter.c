@@ -93,35 +93,68 @@ apply_blur_filter( int width, int height, pixel * pi, int size, int threshold ) 
                 }
             }
 
-            //** check Threshold
-            #pragma omp for collapse(2) schedule(static,width) 
-            for(j=1; j<height-1; j++)
-            {
-                for(k=1; k<width-1; k++)
+           //*** Could it go inside blur filter? One problem is that it doesn't consider boundaries. 
+                //*** Check TOP
+                #pragma omp for collapse(2) schedule(static,width) 
+                for(j=1; j < height/10-size-1; ++j)
                 {
+                    for(k=1; k < width-1; ++k)
+                    {
+                        float diff_r ;
+                        float diff_g ;
+                        float diff_b ;
 
-                    float diff_r ;
-                    float diff_g ;
-                    float diff_b ;
+                        diff_r = (new[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
+                        diff_g = (new[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
+                        diff_b = (new[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
+                        // if(j > height/10-size && j < j_cond)
+                        //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
 
-                    diff_r = (new[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
-                    diff_g = (new[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
-                    diff_b = (new[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
-
-                    if ( diff_r > threshold || -diff_r > threshold
-                            ||
-                            diff_g > threshold || -diff_g > threshold
-                            ||
-                            diff_b > threshold || -diff_b > threshold
-                    ) {
-                        end = 0 ;
+                        if ( diff_r > threshold || -diff_r > threshold
+                                ||
+                                diff_g > threshold || -diff_g > threshold
+                                ||
+                                diff_b > threshold || -diff_b > threshold
+                        ) {
+                            end = 0 ;
+                        }
+                        //*** otherwise, update p with new
+                        pi[CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                        pi[CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                        pi[CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
                     }
-
-                    pi[CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
-                    pi[CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
-                    pi[CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
                 }
-            }
+
+                //*** Check bottom
+                #pragma omp for collapse(2) schedule(static,width) 
+                for(j=height*0.9+size+1; j < height-size-1; ++j)
+                {
+                    for(k=1; k < width-1; ++k)
+                    {
+                        float diff_r ;
+                        float diff_g ;
+                        float diff_b ;
+
+                        diff_r = (new[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
+                        diff_g = (new[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
+                        diff_b = (new[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
+                        // if(j > height/10-size && j < j_cond)
+                        //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
+
+                        if ( diff_r > threshold || -diff_r > threshold
+                                ||
+                                diff_g > threshold || -diff_g > threshold
+                                ||
+                                diff_b > threshold || -diff_b > threshold
+                        ) {
+                            end = 0 ;
+                        }
+                        //*** otherwise, update p with new
+                        pi[CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                        pi[CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                        pi[CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
+                    }
+                }
         } // #pragma omp parallel end
     }
     while ( threshold > 0 && !end ) ;
