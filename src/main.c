@@ -19,9 +19,10 @@
 
 #define SOBELF_DEBUG 1
 #define LOGGING 1
+#define INCLUDECODE 0
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/write_plog2.txt"
+    #define FILE_NAME "./logs_plots/write_plog2_excl.txt"
     FILE *fOut;
 
 void writeNumToLog(double n){
@@ -81,6 +82,7 @@ int main( int argc, char ** argv )
 
     p = image->p ;
 
+    #if INCLUDECODE
     //#pragma omp parallel for shared(p) schedule(dynamic)
     for ( i = 0 ; i < image->n_images ; i++ )
     {
@@ -98,6 +100,7 @@ int main( int argc, char ** argv )
         apply_gray_filter(width, height, pi);
     }
     /***** End of parallelized version of filters *****/
+    #endif
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
