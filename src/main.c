@@ -16,7 +16,7 @@
 #define SOBELF_DEBUG 1
 
 #if SOBELF_DEBUG
-    #define FILE_NAME "./logs_plots/plog1.txt"
+    #define FILE_NAME "./logs_plots/plog0.txt"
     FILE *fOut;
 
 void writeNumToLog(double n){
@@ -210,7 +210,7 @@ load_pixels( char * filename )
         gettimeofday(&t2, NULL);
         duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
         printf( "[DEBUG] Time needed to fill all the pixels: %lf s\n",  duration);
-        writeNumToLog(duration);
+        //writeNumToLog(duration);
     #endif
 
     /* Allocate image info */
@@ -615,65 +615,43 @@ store_pixels( char * filename, animated_gif * image )
 }
 
 void
-apply_gray_filter( animated_gif * image )
+apply_gray_filter( int width, int height, pixel * pi )
 {
-    int i, j ;
-    pixel ** p ;
+    /*This version of the grey filter works only on one image at a time*/
+    int j;
 
-    p = image->p ;
-
-    #if SOBELF_DEBUG
+    /* #if SOBELF_DEBUG
         struct timeval t0, t1, t2, tf; //added for time checking
         double duration; //added for time checking
         gettimeofday(&t1, NULL);
-    #endif
+    #endif */
 
-    for ( i = 0 ; i < image->n_images ; i++ )
+    
+    for ( j = 0 ; j < width * height ; j++ )
     {
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
-        {
-            int moy ;
+        int moy ;
 
-            // moy = p[i][j].r/4 + ( p[i][j].g * 3/4 ) ;
-            moy = (p[i][j].r + p[i][j].g + p[i][j].b)/3 ;
-            if ( moy < 0 ) moy = 0 ;
-            if ( moy > 255 ) moy = 255 ;
+        // moy = pi[j].r/4 + ( pi[j].g * 3/4 ) ;
+        moy = (pi[j].r + pi[j].g + pi[j].b)/3 ;
+        if ( moy < 0 ) moy = 0 ;
+        if ( moy > 255 ) moy = 255 ;
 
-            p[i][j].r = moy ;
-            p[i][j].g = moy ;
-            p[i][j].b = moy ;
-        }
+        pi[j].r = moy ;
+        pi[j].g = moy ;
+        pi[j].b = moy ;
     }
-    #if SOBELF_DEBUG
+    
+    /* #if SOBELF_DEBUG
         gettimeofday(&t2, NULL);
         duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
         printf( "[DEBUG] Time needed to apply grey filter to all the images: %lf s\n",  duration);
-    #endif
+    #endif */
 }
 
 #define CONV(l,c,nb_c) \
     (l)*(nb_c)+(c)
 
-void apply_gray_line( animated_gif * image ) 
-{
-    int i, j, k ;
-    pixel ** p ;
 
-    p = image->p ;
-
-    for ( i = 0 ; i < image->n_images ; i++ )
-    {
-        for ( j = 0 ; j < 10 ; j++ )
-        {
-            for ( k = image->width[i]/2 ; k < image->width[i] ; k++ )
-            {
-            p[i][CONV(j,k,image->width[i])].r = 0 ;
-            p[i][CONV(j,k,image->width[i])].g = 0 ;
-            p[i][CONV(j,k,image->width[i])].b = 0 ;
-            }
-        }
-    }
-}
 
 void
 apply_blur_filter( animated_gif * image, int size, int threshold )
@@ -876,7 +854,7 @@ int main( int argc, char ** argv )
     char * input_filename ; 
     char * output_filename ;
     animated_gif * image ;
-    struct timeval t1, t2;
+    struct timeval t0, t1, t2;
     double duration ;
 
     if ( argc < 3 )
@@ -909,13 +887,7 @@ int main( int argc, char ** argv )
             input_filename, image->n_images, duration ) ;
 
     /* FILTER Timer start */
-    gettimeofday(&t1, NULL);
-
-    /* Convert the pixels into grayscale */
-    apply_gray_filter( image ) ;
-
-    /* Apply blur filter with convergence value */
-    apply_blur_filter( image, 5, 20 ) ;
+    gettimeofday(&t0, NULL);
 
     /***** Start of parallelized version of filters *****/
     int i;
@@ -925,6 +897,7 @@ int main( int argc, char ** argv )
 
     p = image->p ;
 
+    //#pragma omp parallel for shared(p) schedule(dynamic)
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         width = image->width[i] ;
@@ -933,18 +906,24 @@ int main( int argc, char ** argv )
 
         /* Apply sobel filter on pixels */
         apply_sobel_filter(width, height, pi);
+
+        /*Apply blur filter with convergence value*/
+        //apply_blur_filter( width, height, pi, 5, 20 ) ;
+
+        /*Apply grey filter: convert the pixels into grayscale */
+        apply_gray_filter(width, height, pi);
     }
     /***** End of parallelized version of filters *****/
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
 
-    duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+    duration = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
 
     printf( "SOBEL done in %lf s\n", duration ) ;
-
-
-
+    #if SOBELF_DEBUG
+        writeNumToLog(duration);
+    #endif
 
     /* EXPORT Timer start */
     gettimeofday(&t1, NULL);
