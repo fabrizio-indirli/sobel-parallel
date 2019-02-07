@@ -655,8 +655,7 @@ void apply_gray_line( animated_gif * image )
 void
 apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
 {
-    // int i, j, k ;
-    int i, k; //***
+    int i, j, k ;
     int width, height ;
     int end = 0 ;
     int n_iter = 0 ;
@@ -668,7 +667,6 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
     p = image->p ;
 
 
-    //*** for the imgages, MPI
     /* Process all images */
     for ( i = 0 ; i < image->n_images ; i++ )
     {
@@ -686,11 +684,10 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
             n_iter++ ;
 
             /* Apply blur on top part of image (10%) */
-            #pragma omp parallel //***
+            #pragma omp parallel default(none) private(j,k) shared(i,size,threshold,width,height,p,new,end) //***
             {
-                int j; //***
-                #pragma omp for schedule(static,1) //***
-                for(j=size; j<height/3-size; j++) //*** 10 -> 3
+                #pragma omp for schedule(static,width) 
+                for(j=size; j<height/10-size; j++) //*** 10 -> 3
                 {
                     // printf("> GRAY FILTER > Thread %d running iteration %d\n", omp_get_thread_num(), i);
                     for(k=size; k<width-size; k++)
@@ -710,15 +707,16 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                             }
                         }
 
-                        new[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+                        new[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ; // (size+1) * (size+1)
                         new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
                         new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
                     }
-                }
+                } // barrier...
 
                 /* Copy the middle part of the image */
-                #pragma omp for schedule(static,1) //***
-                for(j=height/3-size; j<height*0.9+size; j++) //*** 10 -> 3
+                int j_cond = height*0.9+size;
+                #pragma omp for schedule(static,width) 
+                for(j=height/10-size; j<j_cond; j++) //*** 10 -> 3
                 {
                     for(k=size; k<width-size; k++)
                     {
@@ -729,7 +727,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 }
 
                 /* Apply blur on the bottom part of the image (10%) */
-                #pragma omp for schedule(static,1) //***
+                #pragma omp for schedule(static,width) 
                 for(j=height*0.9+size; j<height-size; j++)
                 {
                     for(k=size; k<width-size; k++)
@@ -755,7 +753,8 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                     }
                 }
 
-                #pragma omp for schedule(static,1) //***
+                //** check Threshold
+                #pragma omp for schedule(static,width) 
                 for(j=1; j<height-1; j++)
                 {
                     for(k=1; k<width-1; k++)
@@ -783,8 +782,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                         p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
                     }
                 }
-            } // omp parallel
-
+            } // #pragma omp parallel end
         }
         while ( threshold > 0 && !end ) ;
 
