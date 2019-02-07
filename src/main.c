@@ -21,7 +21,7 @@
 #define LOGGING 1
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/plog2.txt"
+    #define FILE_NAME "./logs_plots/write_plog2.txt"
     FILE *fOut;
 
 void writeNumToLog(double n){
@@ -106,7 +106,7 @@ int main( int argc, char ** argv )
 
     printf( "SOBEL done in %lf s\n", duration ) ;
     #if LOGGING
-        writeNumToLog(duration);
+        //writeNumToLog(duration);
     #endif
 
     /* EXPORT Timer start */
@@ -121,6 +121,10 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "Export done in %lf s in file %s\n", duration, output_filename ) ;
+
+    #if LOGGING
+        writeNumToLog(duration);
+    #endif
 
     /*Close perfomance log file*/
     #if LOGGING
