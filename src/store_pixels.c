@@ -10,7 +10,7 @@ store_pixels( char * filename, animated_gif * image )
 
     /* Initialize the new set of colors */
     colormap = (GifColorType *)malloc( 256 * sizeof( GifColorType ) ) ;
-    if ( colormap == NULL ) 
+    if ( colormap == NULL )
     {
         fprintf( stderr,
                 "Unable to allocate 256 colors\n" ) ;
@@ -18,7 +18,7 @@ store_pixels( char * filename, animated_gif * image )
     }
 
     /* Everything is white by default */
-    for ( i = 0 ; i < 256 ; i++ ) 
+    for ( i = 0 ; i < 256 ; i++ )
     {
         colormap[i].Red = 255 ;
         colormap[i].Green = 255 ;
@@ -69,7 +69,7 @@ store_pixels( char * filename, animated_gif * image )
 
                 int found = -1 ;
 
-                moy = 
+                moy =
                     (
                      image->g->SColorMap->Colors[ tr_color ].Red
                      +
@@ -91,7 +91,7 @@ store_pixels( char * filename, animated_gif * image )
 
                 for ( k = 0 ; k < n_colors ; k++ )
                 {
-                    if ( 
+                    if (
                             moy == colormap[k].Red
                             &&
                             moy == colormap[k].Green
@@ -102,11 +102,11 @@ store_pixels( char * filename, animated_gif * image )
                         found = k ;
                     }
                 }
-                if ( found == -1  ) 
+                if ( found == -1  )
                 {
-                    if ( n_colors >= 256 ) 
+                    if ( n_colors >= 256 )
                     {
-                        fprintf( stderr, 
+                        fprintf( stderr,
                                 "Error: Found too many colors inside the image\n"
                                ) ;
                         return 0 ;
@@ -154,7 +154,7 @@ store_pixels( char * filename, animated_gif * image )
 
                     int found = -1 ;
 
-                    moy = 
+                    moy =
                         (
                          image->g->SColorMap->Colors[ tr_color ].Red
                          +
@@ -176,7 +176,7 @@ store_pixels( char * filename, animated_gif * image )
 
                     for ( k = 0 ; k < n_colors ; k++ )
                     {
-                        if ( 
+                        if (
                                 moy == colormap[k].Red
                                 &&
                                 moy == colormap[k].Green
@@ -187,11 +187,11 @@ store_pixels( char * filename, animated_gif * image )
                             found = k ;
                         }
                     }
-                    if ( found == -1  ) 
+                    if ( found == -1  )
                     {
-                        if ( n_colors >= 256 ) 
+                        if ( n_colors >= 256 )
                         {
-                            fprintf( stderr, 
+                            fprintf( stderr,
                                     "Error: Found too many colors inside the image\n"
                                    ) ;
                             return 0 ;
@@ -239,7 +239,7 @@ store_pixels( char * filename, animated_gif * image )
                 i, image->n_images, image->width[i], image->height[i] ) ;
 #endif
 
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ ) 
+        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
         {
             int found = 0 ;
             for ( k = 0 ; k < n_colors ; k++ )
@@ -252,11 +252,11 @@ store_pixels( char * filename, animated_gif * image )
                 }
             }
 
-            if ( found == 0 ) 
+            if ( found == 0 )
             {
-                if ( n_colors >= 256 ) 
+                if ( n_colors >= 256 )
                 {
-                    fprintf( stderr, 
+                    fprintf( stderr,
                             "Error: Found too many colors inside the image\n"
                            ) ;
                     return 0 ;
@@ -306,10 +306,10 @@ store_pixels( char * filename, animated_gif * image )
     /* Update the raster bits according to color map */
     for ( i = 0 ; i < image->n_images ; i++ )
     {
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ ) 
+        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
         {
             int found_index = -1 ;
-            for ( k = 0 ; k < n_colors ; k++ ) 
+            for ( k = 0 ; k < n_colors ; k++ )
             {
                 if ( p[i][j].r == image->g->SColorMap->Colors[k].Red &&
                         p[i][j].g == image->g->SColorMap->Colors[k].Green &&
@@ -319,7 +319,7 @@ store_pixels( char * filename, animated_gif * image )
                 }
             }
 
-            if ( found_index == -1 ) 
+            if ( found_index == -1 )
             {
                 fprintf( stderr,
                         "Error: Unable to find a pixel in the color map\n" ) ;
@@ -336,3 +336,5 @@ store_pixels( char * filename, animated_gif * image )
 
     return 1 ;
 }
+
+//*** 
