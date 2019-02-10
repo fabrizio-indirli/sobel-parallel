@@ -132,7 +132,7 @@ load_pixels( char * filename )
     bool ok = true;
     int j = 0;
     /* For each image */
-    #pragma omp parallel for shared(p) firstprivate(ok, j) schedule(dynamic)
+    // #pragma omp parallel for shared(p) firstprivate(ok, j) schedule(dynamic)
     for ( i = 0 ; i < n_images ; i++ )
     {
         #if SOBELF_DEBUG

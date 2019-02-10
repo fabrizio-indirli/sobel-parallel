@@ -22,12 +22,20 @@
 #define INCLUDECODE 0
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/write_plog2_excl.txt"
+    #define FILE_NAME "./logs_plots/write_plog3.csv"
     FILE *fOut;
 
-void writeNumToLog(double n){
-    fprintf(fOut, "%lf\n", n);
-}
+    void writeNumToLog(double n){
+        fprintf(fOut, "%lf\n", n);
+    }
+
+    void appendNumToRow(double n){
+        fprintf(fOut, "%lf,",n);
+    }
+
+    void newRow(){
+        fprintf(fOut, "\n");
+    }
 
 #endif
 
@@ -54,6 +62,9 @@ int main( int argc, char ** argv )
     /*Open perfomance log file for debug*/
     #if LOGGING
         fOut = fopen(FILE_NAME,"a");
+        if(ftell(fOut)==0) //file is empty
+            fprintf(fOut, "import_time,filters_time,export_time,");
+        newRow();
     #endif
 
     /* IMPORT Timer start */
@@ -67,9 +78,11 @@ int main( int argc, char ** argv )
     gettimeofday(&t2, NULL);
 
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-
     printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
             input_filename, image->n_images, duration ) ;
+    #if LOGGING
+        appendNumToRow(duration);
+    #endif
 
     /* FILTER Timer start */
     gettimeofday(&t0, NULL);
@@ -98,18 +111,17 @@ int main( int argc, char ** argv )
 
         /*Apply grey filter: convert the pixels into grayscale */
         apply_gray_filter(width, height, pi);
+
     }
     /***** End of parallelized version of filters *****/
     #endif
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
-
     duration = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
-
-    printf( "SOBEL done in %lf s\n", duration ) ;
+    printf( "All filters done in %lf s\n", duration ) ;
     #if LOGGING
-        //writeNumToLog(duration);
+        appendNumToRow(duration);
     #endif
 
     /* EXPORT Timer start */
@@ -120,13 +132,10 @@ int main( int argc, char ** argv )
 
     /* EXPORT Timer stop */
     gettimeofday(&t2, NULL);
-
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-
     printf( "Export done in %lf s in file %s\n", duration, output_filename ) ;
-
     #if LOGGING
-        writeNumToLog(duration);
+        appendNumToRow(duration);
     #endif
 
     /*Close perfomance log file*/
