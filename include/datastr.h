@@ -11,7 +11,7 @@ typedef struct pixel
     int b ; /* Blue */
 } pixel ;
 
-/* Represent one GIF image (animated or not */
+/* Represent one GIF image (animated or not) */
 typedef struct animated_gif
 {
     int n_images ; /* Number of images */
