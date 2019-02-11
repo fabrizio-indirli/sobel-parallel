@@ -41,7 +41,25 @@
 
 #endif
 
+void apply_all_filters(int * sts, pixel ** p, int num_subimgs){
+    int i, width, height;
+    for ( i = 0 ; i < num_subimgs ; i++ )
+    {
+        pixel * pi = p[i];
+        width = sts[i];
+        height = sts[num_subimgs + i];
 
+        /* Apply sobel filter on pixels */
+        apply_sobel_filter(width, height, pi);
+
+        /*Apply blur filter with convergence value*/
+        apply_blur_filter( width, height, pi, 5, 20 ) ;
+
+        /*Apply grey filter: convert the pixels into grayscale */
+        apply_gray_filter(width, height, pi);
+
+    }
+}
 
 int main( int argc, char ** argv )
 {
@@ -108,7 +126,6 @@ int main( int argc, char ** argv )
 
     /***** Start of parallelized version of filters *****/
     int i;
-    int width, height ;
 
     pixel ** p ;
     p = image->p ;
@@ -120,29 +137,28 @@ int main( int argc, char ** argv )
         // work scheduling done by first node
         int n_imgs_init_node = num_imgs - (n_imgs_per_node * (num_nodes - 1));
         
-        for(i=0; i<num_nodes; i++){
+        pixel ** pts;
+        int sts[2*n_imgs_per_node]; //vector 'sizes to send'
+        int j;
+
+        for(i=1; i<num_nodes; i++){
             //TODO: send pixels to other processes
+            pts = p[i * n_imgs_per_node];
+            MPI_Send(pts, n_imgs_per_node, mpi_pixel_type, i, 0, MPI_COMM_WORLD);
+
+            for(j=0; j < n_imgs_per_node; j++){
+                sts[j] = image->width[i*n_imgs_per_node + j];
+                sts[n_imgs_per_node + j] = image->height[i*n_imgs_per_node + j];
+            }
+            MPI_Send(sts, 2*n_imgs_per_node, MPI_INT, i, 1, MPI_COMM_WORLD);
+
         }
 
         n_imgs_per_node = n_imgs_init_node;
     }
 
-    for ( i = 0 ; i < num_imgs ; i++ )
-    {
-        width = image->width[i] ;
-        height = image->height[i] ;
-        pixel * pi = p[i];
+    int width, height ;
 
-        /* Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
-
-        /*Apply blur filter with convergence value*/
-        apply_blur_filter( width, height, pi, 5, 20 ) ;
-
-        /*Apply grey filter: convert the pixels into grayscale */
-        apply_gray_filter(width, height, pi);
-
-    }
     /***** End of parallelized version of filters *****/
 
     /* FILTER Timer stop */
