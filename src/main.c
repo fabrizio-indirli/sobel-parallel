@@ -793,7 +793,9 @@ apply_sobel_filter( animated_gif * image )
 
         #pragma omp parallel default(none) private(j,k) shared(i,width,height,p,sobel) //***
         {
-            #pragma omp for collapse(2) schedule(static)
+            // `dynamic` can be a better choice, since there is an if statement that might invoke imbalance for the iteration.
+            // Actually nope... static one is faster. 
+            #pragma omp for collapse(2) schedule(static) 
             for(j=1; j<height-1; j++)
             {
                 for(k=1; k<width-1; k++)
@@ -834,19 +836,24 @@ apply_sobel_filter( animated_gif * image )
                         sobel[CONV(j  ,k  ,width)].g = 0 ;
                         sobel[CONV(j  ,k  ,width)].b = 0 ;
                     }
-                }
-            }
-        
-            #pragma omp for collapse(2) schedule(static)
-            for(j=1; j<height-1; j++)
-            {
-                for(k=1; k<width-1; k++)
-                {
+
+                    //*** Replacing pixel values. (Merged loop)
                     p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
                     p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
                     p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
                 }
             }
+            //*** Merged with the above loop. Got faster
+            // #pragma omp for collapse(2) schedule(static)
+            // for(j=1; j<height-1; j++)
+            // {
+            //     for(k=1; k<width-1; k++)
+            //     {
+            //         p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+            //         p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+            //         p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+            //     }
+            // }
         } // #pragma omp parallel ends
         free (sobel) ;
     }
