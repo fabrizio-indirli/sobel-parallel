@@ -9,11 +9,13 @@ void apply_sobel_filter(int width, int height, pixel * pi){
     int j, k;
     pixel * sobel ;
     sobel = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
-    
-    #pragma omp parallel default(none) private(j,k) shared(width,height,pi,sobel) //***
-    {   
-        #pragma omp for collapse(2) schedule(static)
-        for(j=1; j<height-1; j++)
+
+        #pragma omp parallel default(none) private(j,k) shared(width,height,pi,sobel) //***
+        {
+            // `dynamic` can be a better choice, since there is an if statement that might invoke imbalance for the iteration.
+            // Actually nope... static one is faster. 
+            #pragma omp for collapse(2) schedule(static) 
+            for(j=1; j<height-1; j++)
             {
                 for(k=1; k<width-1; k++)
                 {
@@ -35,14 +37,14 @@ void apply_sobel_filter(int width, int height, pixel * pi){
                     pixel_blue    = pi[CONV(j  ,k  ,width)].b ;
                     pixel_blue_e  = pi[CONV(j  ,k+1,width)].b ;
 
-                    deltaX_blue = -pixel_blue_no + pixel_blue_ne - 2*pixel_blue_o + 2*pixel_blue_e - pixel_blue_so + pixel_blue_se;             
+                    deltaX_blue = -pixel_blue_no + pixel_blue_ne - 2*pixel_blue_o + 2*pixel_blue_e - pixel_blue_so + pixel_blue_se;
 
                     deltaY_blue = pixel_blue_se + 2*pixel_blue_s + pixel_blue_so - pixel_blue_ne - 2*pixel_blue_n - pixel_blue_no;
 
                     val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
 
 
-                    if ( val_blue > 50 ) 
+                    if ( val_blue > 50 )
                     {
                         sobel[CONV(j  ,k  ,width)].r = 255 ;
                         sobel[CONV(j  ,k  ,width)].g = 255 ;
@@ -53,20 +55,14 @@ void apply_sobel_filter(int width, int height, pixel * pi){
                         sobel[CONV(j  ,k  ,width)].g = 0 ;
                         sobel[CONV(j  ,k  ,width)].b = 0 ;
                     }
-                }
-            }
 
-            #pragma omp for collapse(2) schedule(static)
-            for(j=1; j<height-1; j++)
-            {
-                for(k=1; k<width-1; k++)
-                {
+                    //*** Replacing pixel values. (Merged loop)
                     pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
                     pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
                     pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
                 }
             }
-        }
+        } // #pragma omp parallel ends
         free (sobel) ;
 
 }

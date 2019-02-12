@@ -19,7 +19,6 @@
 
 #define SOBELF_DEBUG 1
 #define LOGGING 1
-#define INCLUDECODE 0
 
 #if LOGGING
     #define FILE_NAME "./logs_plots/write_plog3.csv"
@@ -95,7 +94,6 @@ int main( int argc, char ** argv )
 
     p = image->p ;
 
-    #if INCLUDECODE
     //#pragma omp parallel for shared(p) schedule(dynamic)
     for ( i = 0 ; i < image->n_images ; i++ )
     {
@@ -114,7 +112,6 @@ int main( int argc, char ** argv )
 
     }
     /***** End of parallelized version of filters *****/
-    #endif
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
