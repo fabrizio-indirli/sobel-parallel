@@ -10,18 +10,16 @@
 #include <sys/time.h>
 #include <gif_lib.h>
 #include <stdbool.h>
-#include <mpi.h>
-#include <stddef.h>
 
 #include "load_pixels.h"
 #include "store_pixels.h"
 #include "grey_filter.h"
 #include "blur_filter.h"
 #include "sobel_filter.h"
-#include "datastr.h"
 
 #define SOBELF_DEBUG 1
 #define LOGGING 1
+#define INCLUDECODE 0
 
 #if LOGGING
     #define FILE_NAME "./logs_plots/write_plog3.csv"
@@ -57,23 +55,6 @@ int main( int argc, char ** argv )
         fprintf( stderr, "Usage: %s input.gif output.gif \n", argv[0] ) ;
         return 1 ;
     }
-
-    int num_nodes, my_rank;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
-    MPI_Comm_Rank(MPI_COMM_WORLD, &my_rank);
-
-    /*create a MPI type for struct pixel */
-    #define N_ITEMS_PIXEL  3
-    int blocklengths[3] = {1,1,1};
-    MPI_Datatype types[3] = {MPI_INT,MPI_INT,MPI_INT};
-    MPI_Datatype mpi_pixel_type;
-    MPI_Aint offsets[3];
-    offsets[0] = offsetof(pixel,r);
-    offsets[1] = offsetof(pixel,g);
-    offsets[0] = offsetof(pixel,b);
-    MPI_Type_create_struct(N_ITEMS_PIXEL, blocklengths, offsets, types, &mpi_pixel_type);
-    MPI_Type_commit(mpi_pixel_type);
 
     input_filename = argv[1] ;
     output_filename = argv[2] ;
@@ -111,23 +92,12 @@ int main( int argc, char ** argv )
     int width, height ;
 
     pixel ** p ;
+
     p = image->p ;
-    int num_imgs = image->n_images;
 
-    int n_imgs_per_node = num_imgs / num_nodes; //integer division
-
-    if(my_rank == 0){
-        // work scheduling done by first node
-        int n_imgs_init_node = num_imgs - (n_imgs_per_node * (num_nodes - 1));
-        
-        for(i=0; i<num_nodes; i++){
-            //TODO: send pixels to other processes
-        }
-
-        n_imgs_per_node = n_imgs_init_node;
-    }
-
-    for ( i = 0 ; i < num_imgs ; i++ )
+    #if INCLUDECODE
+    //#pragma omp parallel for shared(p) schedule(dynamic)
+    for ( i = 0 ; i < image->n_images ; i++ )
     {
         width = image->width[i] ;
         height = image->height[i] ;
@@ -144,11 +114,12 @@ int main( int argc, char ** argv )
 
     }
     /***** End of parallelized version of filters *****/
+    #endif
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
-    printf( "All filters done in %lf s on %d sub-images\n", duration, num_imgs ) ;
+    printf( "All filters done in %lf s\n", duration ) ;
     #if LOGGING
         appendNumToRow(duration);
     #endif
