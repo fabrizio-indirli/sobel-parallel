@@ -694,10 +694,6 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
             /* Apply blur on top part of image (10%) */
             #pragma omp parallel default(none) private(j,k) shared(i,size,threshold,width,height,p,new,end) //***
             {
-                #pragma omp master
-                {
-                    printf("omp_get_num_threads() = %d\n", omp_get_num_threads() );
-                }
                 //*** one thing that if checks only j not k...
                 //*** WHAT IF not using `collapse`?
                 // #pragma omp for collapse(2) schedule(static,width) 
