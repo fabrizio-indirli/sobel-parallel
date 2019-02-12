@@ -10,7 +10,7 @@
 #include <sys/time.h>
 #include <gif_lib.h>
 #include <stdbool.h>
-#include <mpi.h>
+// #include <mpi.h>
 #include <stddef.h>
 
 #include "load_pixels.h"
@@ -20,8 +20,8 @@
 #include "sobel_filter.h"
 #include "datastr.h"
 
-#define SOBELF_DEBUG 1
-#define LOGGING 1
+#define SOBELF_DEBUG 0
+#define LOGGING 0
 
 #if LOGGING
     #define FILE_NAME "./logs_plots/write_plog3.csv"
@@ -41,13 +41,13 @@
 
 #endif
 
-void apply_all_filters(int * sts, pixel ** p, int num_subimgs){
+void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs){
     int i, width, height;
     for ( i = 0 ; i < num_subimgs ; i++ )
     {
         pixel * pi = p[i];
-        width = sts[i];
-        height = sts[num_subimgs + i];
+        width = ws[i];
+        height = hs[i];
 
         /* Apply sobel filter on pixels */
         apply_sobel_filter(width, height, pi);
@@ -77,21 +77,28 @@ int main( int argc, char ** argv )
     }
 
     int num_nodes, my_rank;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
-    MPI_Comm_Rank(MPI_COMM_WORLD, &my_rank);
 
-    /*create a MPI type for struct pixel */
-    #define N_ITEMS_PIXEL  3
-    int blocklengths[3] = {1,1,1};
-    MPI_Datatype types[3] = {MPI_INT,MPI_INT,MPI_INT};
-    MPI_Datatype mpi_pixel_type;
-    MPI_Aint offsets[3];
-    offsets[0] = offsetof(pixel,r);
-    offsets[1] = offsetof(pixel,g);
-    offsets[0] = offsetof(pixel,b);
-    MPI_Type_create_struct(N_ITEMS_PIXEL, blocklengths, offsets, types, &mpi_pixel_type);
-    MPI_Type_commit(mpi_pixel_type);
+    #ifdef MPI_VERSION
+        /* If MPI is enabled */
+        MPI_Init(&argc, &argv);
+        MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
+        MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    
+        /*create a MPI type for struct pixel */
+        #define N_ITEMS_PIXEL  3
+        int blocklengths[3] = {1,1,1};
+        MPI_Datatype types[3] = {MPI_INT,MPI_INT,MPI_INT};
+        MPI_Datatype mpi_pixel_type;
+        MPI_Aint offsets[3];
+        offsets[0] = offsetof(pixel,r);
+        offsets[1] = offsetof(pixel,g);
+        offsets[0] = offsetof(pixel,b);
+        MPI_Type_create_struct(N_ITEMS_PIXEL, blocklengths, offsets, types, &mpi_pixel_type);
+        MPI_Type_commit(mpi_pixel_type);
+    #else
+        num_nodes = 1;
+        my_rank = 0;
+    #endif
 
     input_filename = argv[1] ;
     output_filename = argv[2] ;
@@ -140,24 +147,42 @@ int main( int argc, char ** argv )
         pixel ** pts;
         int sts[2*n_imgs_per_node]; //vector 'sizes to send'
         int j;
+        printf("Size of pixels matrix is: %d\n", sizeof(pixel *));
 
         for(i=1; i<num_nodes; i++){
-            //TODO: send pixels to other processes
-            pts = p[i * n_imgs_per_node];
-            MPI_Send(pts, n_imgs_per_node, mpi_pixel_type, i, 0, MPI_COMM_WORLD);
+            #ifdef MPI_VERSION
+                // send dimensions to other processes
+                for(j=0; j < n_imgs_per_node; j++){
+                    sts[j] = image->width[i*n_imgs_per_node + j];
+                    sts[n_imgs_per_node + j] = image->height[i*n_imgs_per_node + j];
+                }
+                // send a vector whose first half contains the widths and whose last half contains the heights
+                MPI_Send(sts, 2*n_imgs_per_node, MPI_INT, i, 1, MPI_COMM_WORLD);
 
-            for(j=0; j < n_imgs_per_node; j++){
-                sts[j] = image->width[i*n_imgs_per_node + j];
-                sts[n_imgs_per_node + j] = image->height[i*n_imgs_per_node + j];
-            }
-            MPI_Send(sts, 2*n_imgs_per_node, MPI_INT, i, 1, MPI_COMM_WORLD);
-
+                //send pixels to other processes
+                pts = p[i * n_imgs_per_node];
+                MPI_Send(pts, n_imgs_per_node, mpi_pixel_type, i, 0, MPI_COMM_WORLD);
+            #endif
         }
 
-        n_imgs_per_node = n_imgs_init_node;
+        // node 0 computes filters on its images
+        apply_all_filters(image->width, image->height, p, n_imgs_init_node);
+
+    } else {
+            #ifdef MPI_VERSION
+                // nodes with rank >= 1 receive the dimensions vector and the pixels matrix
+                int dims[2 * n_imgs_per_node];
+                MPI_Status comm_status;
+                MPI_Recv(dims, 2 * n_imgs_per_node, MPI_INT, 0, 1, MPI_COMM_WORLD, &comm_status);
+                int total_num_pixels = 0;
+                for(i=0; i < n_imgs_per_node; i++){
+                    total_num_pixels += dims[i] * dims[n_imgs_per_node + i]; 
+                }
+                // matrix to store the received pixels
+                pixel ** p_rec = (pixel **)malloc(sizeof(pixel)*total_num_pixels);
+            #endif
     }
 
-    int width, height ;
 
     /***** End of parallelized version of filters *****/
 
@@ -178,7 +203,7 @@ int main( int argc, char ** argv )
     /* EXPORT Timer stop */
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-    printf( "Export done in %lf s in file %s\n", duration, output_filename ) ;
+    printf( "Export done in %lf s in file %s\n\n", duration, output_filename ) ;
     #if LOGGING
         appendNumToRow(duration);
     #endif
