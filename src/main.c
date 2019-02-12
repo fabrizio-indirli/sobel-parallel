@@ -13,7 +13,7 @@
 #include <gif_lib.h>
 
 
-#define SOBELF_DEBUG 0
+#define SOBELF_DEBUG 1
 
 /* Represent one pixel from the image */
 typedef struct pixel
@@ -386,7 +386,7 @@ store_pixels( char * filename, animated_gif * image )
                     image->g->ExtensionBlocks[j].Bytes[3] = n_colors ;
 
                     n_colors++ ;
-                } else
+                } else // if ( found == 0  )
                 {
 #if SOBELF_DEBUG
                     printf( "[DEBUG]\tFound existing color %d\n",
@@ -395,7 +395,7 @@ store_pixels( char * filename, animated_gif * image )
                     image->g->ExtensionBlocks[j].Bytes[3] = found ;
                 }
             }
-        }
+        } // f = image->g->ExtensionBlocks[j].Function ; if ( f == GRAPHICS_EXT_FUNC_CODE )
     }
 
     for ( i = 0 ; i < image->n_images ; i++ )
