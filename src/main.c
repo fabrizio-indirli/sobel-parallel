@@ -702,7 +702,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 {
                     for(k=size; k<width-size; k++)
                     {
-                        // int pixel = CONV(j,k,width); //*** canbe useful...
+                        // int pixel = CONV(j,k,width); //*** can be useful...
                         // Top and Bottom, 10% each
                         if(j<height/10-size || j>height*0.9+size-1) // equivalent to (j>=height*0.9+size)
                         {
@@ -731,7 +731,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                             p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
                             p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
 
-                            //*** Now, check the difference. 
+                            //*** Now, check the threshold. 
                             float diff_r ;
                             float diff_g ;
                             float diff_b ;
@@ -898,7 +898,8 @@ int main( int argc, char ** argv )
 
     printf( "GIF loaded from file %s with %d image(s) in %lf s\n",
             input_filename, image->n_images, duration ) ;
-    fprintf(fptr,"\t %f", duration);
+    // fprintf(fptr,"\t %f", duration);
+    fprintf(fptr,", \t %f", duration);
 
 
     /* FILTER Timer start */
@@ -911,8 +912,8 @@ int main( int argc, char ** argv )
 
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "GRAY FILTER done in %lf s\n", duration ) ;
-    fprintf(fptr,"\t %f", duration);
-
+    // fprintf(fptr,"\t %f", duration);
+    fprintf(fptr,", \t %f", duration);
 
 
     /* Apply blur filter with convergence value */
@@ -922,8 +923,8 @@ int main( int argc, char ** argv )
 
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "BLUR FILTER done in %lf s\n", duration ) ;
-    fprintf(fptr,"\t %f", duration);
-
+    // fprintf(fptr,"\t %f", duration);
+    fprintf(fptr,", \t %f", duration);
 
 
 
@@ -936,7 +937,8 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "SOBEL done in %lf s\n", duration ) ;
-    fprintf(fptr,"\t %f", duration);
+    // fprintf(fptr,"\t %f", duration);
+    fprintf(fptr,", \t %f", duration);
 
 
 
@@ -953,7 +955,8 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
 
     printf( "Export done in %lf s in file %s\n\n\n", duration, output_filename ) ;
-    fprintf(fptr,"\t %f\n\n", duration);
+    // fprintf(fptr,"\t %f\n\n", duration);
+    fprintf(fptr,", \t %f\n", duration);
     fclose(fptr);
 
 

@@ -277,3 +277,19 @@ images/original/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large.gif
 	 0.022856	 0.001754	 0.061304	 0.066921	 0.627931
 
 =====DONE=====
+images/original/051009.vince.gif
+images/original/1.gif
+images/original/200_s.gif
+images/original/9815573.gif
+images/original/australian-flag-large.gif
+images/original/Campusplan-Hausnr.gif
+images/original/Campusplan-Mobilitaetsbeschraenkte.gif
+images/original/fire.gif
+images/original/frame_002.gif
+images/original/giphy-3.gif
+images/original/Mandelbrot-large.gif
+images/original/porsche.gif
+images/original/Produits_sous_linux.gif
+images/original/TimelyHugeGnu.gif
+images/original/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large.gif
+=====DONE=====
