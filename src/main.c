@@ -734,6 +734,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                             diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
                             diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
                             diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+
                             // if(j > height/10-size && j < j_cond)
                             //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
 
