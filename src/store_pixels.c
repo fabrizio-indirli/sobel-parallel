@@ -1,4 +1,5 @@
 #include "store_pixels.h"
+#include <sys/time.h> //TODO: to remove
 
 int
 store_pixels( char * filename, animated_gif * image )
@@ -7,6 +8,9 @@ store_pixels( char * filename, animated_gif * image )
     pixel ** p ;
     int i, j, k ;
     GifColorType * colormap ;
+
+    struct timeval ti, tf; // TODO: to remove
+    double dur; // TODO: to remove
 
     /* Initialize the new set of colors */
     colormap = (GifColorType *)malloc( 256 * sizeof( GifColorType ) ) ;
@@ -54,6 +58,7 @@ store_pixels( char * filename, animated_gif * image )
     n_colors++ ;
 
     /* Process extension blocks in main structure */
+    gettimeofday(&ti, NULL); // TODO: to remove
     for ( j = 0 ; j < image->g->ExtensionBlockCount ; j++ )
     {
         int f ;
@@ -136,7 +141,11 @@ store_pixels( char * filename, animated_gif * image )
             }
         }
     }
+    gettimeofday(&tf, NULL); //TODO: to remove
+    dur = (tf.tv_sec -ti.tv_sec)+((tf.tv_usec-ti.tv_usec)/1e6); //TODO: to remove
+    printf("Times for store_pixels: %lf ", dur);
 
+    gettimeofday(&ti, NULL); //TODO: to remove
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         for ( j = 0 ; j < image->g->SavedImages[i].ExtensionBlockCount ; j++ )
@@ -223,6 +232,10 @@ store_pixels( char * filename, animated_gif * image )
         }
     }
 
+    gettimeofday(&tf, NULL); //TODO: to remove
+    dur = (tf.tv_sec -ti.tv_sec)+((tf.tv_usec-ti.tv_usec)/1e6); //TODO: to remove
+    printf(" %lf ", dur);
+
 #if SOBELF_DEBUG
     printf( "[DEBUG] Number of colors after background and transparency: %d\n",
             n_colors ) ;
@@ -230,6 +243,7 @@ store_pixels( char * filename, animated_gif * image )
 
     p = image->p ;
 
+    gettimeofday(&ti, NULL); //TODO: to remove
     /* Find the number of colors inside the image */
     for ( i = 0 ; i < image->n_images ; i++ )
     {
@@ -275,6 +289,10 @@ store_pixels( char * filename, animated_gif * image )
         }
     }
 
+    gettimeofday(&tf, NULL); //TODO: to remove
+    dur = (tf.tv_sec -ti.tv_sec)+((tf.tv_usec-ti.tv_usec)/1e6); //TODO: to remove
+    printf(" %lf ", dur);
+
 #if SOBELF_DEBUG
     printf( "OUTPUT: found %d color(s)\n", n_colors ) ;
 #endif
@@ -303,6 +321,7 @@ store_pixels( char * filename, animated_gif * image )
 
     image->g->SColorMap = cmo ;
 
+    gettimeofday(&ti, NULL); //TODO: to remove
     /* Update the raster bits according to color map */
     for ( i = 0 ; i < image->n_images ; i++ )
     {
@@ -329,10 +348,17 @@ store_pixels( char * filename, animated_gif * image )
             image->g->SavedImages[i].RasterBits[j] = found_index ;
         }
     }
+    gettimeofday(&tf, NULL); //TODO: to remove
+    dur = (tf.tv_sec -ti.tv_sec)+((tf.tv_usec-ti.tv_usec)/1e6); //TODO: to remove
+    printf(" %lf ", dur);
 
 
+    gettimeofday(&ti, NULL); //TODO: to remove
     /* Write the final image */
     if ( !output_modified_read_gif( filename, image->g ) ) { return 0 ; }
+    gettimeofday(&tf, NULL); //TODO: to remove
+    dur = (tf.tv_sec -ti.tv_sec)+((tf.tv_usec-ti.tv_usec)/1e6); //TODO: to remove
+    printf(" %lf \n", dur);
 
     return 1 ;
 }
