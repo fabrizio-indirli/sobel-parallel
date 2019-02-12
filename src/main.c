@@ -694,6 +694,10 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
             /* Apply blur on top part of image (10%) */
             #pragma omp parallel default(none) private(j,k) shared(i,size,threshold,width,height,p,new,end) //***
             {
+                #pragma omp master
+                {
+                    printf("omp_get_num_threads() = %d\n", omp_get_num_threads() );
+                }
                 //*** one thing that if checks only j not k...
                 //*** WHAT IF not using `collapse`?
                 // #pragma omp for collapse(2) schedule(static,width) 
@@ -726,11 +730,6 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                             new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
                             new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
 
-                            //*** update p
-                            p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
-                            p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
-                            p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
-
                             //*** Now, check the threshold. 
                             float diff_r ;
                             float diff_g ;
@@ -750,10 +749,15 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                             ) {
                                 end = 0 ; //*** FLAG (do while loop)
                             }
-                        }
+                            
+                            //*** update p
+                            p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                            p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                            p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
 
-                        // Middle part, just copy
-                        else
+                        } 
+                        // middle part
+                        else 
                         {
                             new[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ;
                             new[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ;
