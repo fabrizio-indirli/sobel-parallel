@@ -10,7 +10,7 @@
 #include <sys/time.h>
 #include <gif_lib.h>
 #include <stdbool.h>
-// #include <mpi.h>
+#include <mpi.h>
 #include <stddef.h>
 
 #include "load_pixels.h"
@@ -22,6 +22,8 @@
 
 #define SOBELF_DEBUG 0
 #define LOGGING 0
+#define ENABLED 0
+#define MPI_DEBUG 1
 
 #if LOGGING
     #define FILE_NAME "./logs_plots/write_plog3.csv"
@@ -41,10 +43,16 @@
 
 #endif
 
+int num_nodes, my_rank;
+
 void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs){
     int i, width, height;
     for ( i = 0 ; i < num_subimgs ; i++ )
     {
+        #if MPI_DEBUG
+            printf("\nProcess %d is applying filters on image %d of %d\n",
+            my_rank, i, num_subimgs);
+        #endif
         pixel * pi = p[i];
         width = ws[i];
         height = hs[i];
@@ -76,13 +84,13 @@ int main( int argc, char ** argv )
         return 1 ;
     }
 
-    int num_nodes, my_rank;
 
     #ifdef MPI_VERSION
         /* If MPI is enabled */
         MPI_Init(&argc, &argv);
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+        printf("\nHere");
     
         /*create a MPI type for struct pixel */
         #define N_ITEMS_PIXEL  3
@@ -94,15 +102,13 @@ int main( int argc, char ** argv )
         offsets[1] = offsetof(pixel,g);
         offsets[0] = offsetof(pixel,b);
         MPI_Type_create_struct(N_ITEMS_PIXEL, blocklengths, offsets, types, &mpi_pixel_type);
-        MPI_Type_commit(mpi_pixel_type);
+        MPI_Type_commit(&mpi_pixel_type);
     #else
         num_nodes = 1;
         my_rank = 0;
     #endif
 
-    input_filename = argv[1] ;
-    output_filename = argv[2] ;
-
+    
     /*Open perfomance log file for debug*/
     #if LOGGING
         fOut = fopen(FILE_NAME,"a");
@@ -111,57 +117,79 @@ int main( int argc, char ** argv )
         newRow();
     #endif
 
-    /* IMPORT Timer start */
-    gettimeofday(&t1, NULL);
+    if(my_rank == 0){
+        // Only initial process loads the file
 
-    /* Load file and store the pixels in array */
-    image = load_pixels( input_filename ) ;
-    if ( image == NULL ) { return 1 ; }
+        input_filename = argv[1] ;
+        output_filename = argv[2] ;
+        gettimeofday(&t1, NULL); /* IMPORT Timer start */
 
-    /* IMPORT Timer stop */
-    gettimeofday(&t2, NULL);
+        /* Load file and store the pixels in array */
+        image = load_pixels( input_filename ) ;
+        if ( image == NULL ) { return 1 ; }
 
-    duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-    printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
-            input_filename, image->n_images, duration ) ;
-    #if LOGGING
-        appendNumToRow(duration);
-    #endif
+        gettimeofday(&t2, NULL); /* IMPORT Timer stop */
+
+        duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+        printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
+                input_filename, image->n_images, duration ) ;
+        #if LOGGING
+            appendNumToRow(duration);
+        #endif
+    }
+
+    
 
     /* FILTER Timer start */
     gettimeofday(&t0, NULL);
 
     /***** Start of parallelized version of filters *****/
-    int i;
+    int i, j;
+    int n_imgs_per_node;
 
-    pixel ** p ;
-    p = image->p ;
-    int num_imgs = image->n_images;
-
-    int n_imgs_per_node = num_imgs / num_nodes; //integer division
+    #define WID(j) dims[j]
+    #define HEI(j) dims[(n_imgs_per_node)+(j)]
+    #define N_PREV_IMGS(i) (n_imgs_init_node)+((i-1)*n_imgs_per_node)
 
     if(my_rank == 0){
         // work scheduling done by first node
+        pixel ** p ;
+        p = image->p ;
+        int num_imgs = image->n_images;
+        printf("\nThis GIF has %d sub-images\n", num_imgs);
+
+        n_imgs_per_node = num_imgs / num_nodes; //integer division
+        if(n_imgs_per_node == 0) n_imgs_per_node = 1;
+
         int n_imgs_init_node = num_imgs - (n_imgs_per_node * (num_nodes - 1));
+
+        #if MPI_DEBUG
+            printf("\nFound %d MPI ranks. 1st rank will process %d imgs, the other %d imgs\n",
+            num_nodes, n_imgs_init_node, n_imgs_per_node);
+        #endif
         
         pixel ** pts;
-        int sts[2*n_imgs_per_node]; //vector 'sizes to send'
-        int j;
+        int dims[2*n_imgs_per_node]; //vector 'sizes to send'
         printf("Size of pixels matrix is: %d\n", sizeof(pixel *));
+
 
         for(i=1; i<num_nodes; i++){
             #ifdef MPI_VERSION
+                //send number of images
+                MPI_Send(&n_imgs_per_node, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+
                 // send dimensions to other processes
                 for(j=0; j < n_imgs_per_node; j++){
-                    sts[j] = image->width[i*n_imgs_per_node + j];
-                    sts[n_imgs_per_node + j] = image->height[i*n_imgs_per_node + j];
+                    dims[j] = image->width[N_PREV_IMGS(i) + j];
+                    dims[n_imgs_per_node + j] = image->height[N_PREV_IMGS(i) + j];
                 }
                 // send a vector whose first half contains the widths and whose last half contains the heights
-                MPI_Send(sts, 2*n_imgs_per_node, MPI_INT, i, 1, MPI_COMM_WORLD);
+                MPI_Send(dims, 2*n_imgs_per_node, MPI_INT, i, 1, MPI_COMM_WORLD);
 
                 //send pixels to other processes
-                pts = p[i * n_imgs_per_node];
-                MPI_Send(pts, n_imgs_per_node, mpi_pixel_type, i, 0, MPI_COMM_WORLD);
+                for(j=0; j < n_imgs_per_node; j++){
+                    MPI_Send(p[N_PREV_IMGS(i) + j], WID(j)*HEI(j), mpi_pixel_type, i,2, MPI_COMM_WORLD);
+                }
             #endif
         }
 
@@ -170,47 +198,68 @@ int main( int argc, char ** argv )
 
     } else {
             #ifdef MPI_VERSION
+                // nodes with rank >= 1 receive the number of images they have to process
+                MPI_Status comm_status;
+                MPI_Recv(&n_imgs_per_node, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &comm_status);
+
                 // nodes with rank >= 1 receive the dimensions vector and the pixels matrix
                 int dims[2 * n_imgs_per_node];
-                MPI_Status comm_status;
                 MPI_Recv(dims, 2 * n_imgs_per_node, MPI_INT, 0, 1, MPI_COMM_WORLD, &comm_status);
                 int total_num_pixels = 0;
-                for(i=0; i < n_imgs_per_node; i++){
-                    total_num_pixels += dims[i] * dims[n_imgs_per_node + i]; 
+                for(j=0; j < n_imgs_per_node; j++){
+                    total_num_pixels += dims[j] * dims[n_imgs_per_node + j]; 
                 }
-                // matrix to store the received pixels
-                pixel ** p_rec = (pixel **)malloc(sizeof(pixel)*total_num_pixels);
+                // allocate array of pointers to pixels' vectors
+                pixel ** p_rec = (pixel **)malloc(sizeof(pixel *) * total_num_pixels);
+
+                //allocate array of pixels for each image
+                for(j=0; j<n_imgs_per_node; j++){
+                    p_rec[j] = (pixel *)malloc( dims[j] * dims[n_imgs_per_node + j] * sizeof( pixel ) ) ;
+                }
+
+                //receive images to process
+                for(i=0; i<n_imgs_per_node; i++){
+                    MPI_Recv(&(p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, &comm_status);
+                }
+                
+                // other node computes filters on its images
+                apply_all_filters(dims, &(dims[n_imgs_per_node]), p_rec, n_imgs_per_node);
+
             #endif
     }
 
-
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Process with rank %d has passed the barrier\n", my_rank);
     /***** End of parallelized version of filters *****/
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
-    printf( "All filters done in %lf s on %d sub-images\n", duration, num_imgs ) ;
+    printf( "All filters done in %lf s on %d sub-images\n", duration, n_imgs_per_node ) ;
     #if LOGGING
         appendNumToRow(duration);
     #endif
 
-    /* EXPORT Timer start */
-    gettimeofday(&t1, NULL);
+    #if ENABLED
 
-    /* Store file from array of pixels to GIF file */
-    if ( !store_pixels( output_filename, image ) ) { return 1 ; }
+        /* EXPORT Timer start */
+        gettimeofday(&t1, NULL);
 
-    /* EXPORT Timer stop */
-    gettimeofday(&t2, NULL);
-    duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-    printf( "Export done in %lf s in file %s\n\n", duration, output_filename ) ;
-    #if LOGGING
-        appendNumToRow(duration);
-    #endif
+        /* Store file from array of pixels to GIF file */
+        if ( !store_pixels( output_filename, image ) ) { return 1 ; }
 
-    /*Close perfomance log file*/
-    #if LOGGING
-        fclose(fOut);
+        /* EXPORT Timer stop */
+        gettimeofday(&t2, NULL);
+        duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+        printf( "Export done in %lf s in file %s\n\n", duration, output_filename ) ;
+        #if LOGGING
+            appendNumToRow(duration);
+        #endif
+
+        /*Close perfomance log file*/
+        #if LOGGING
+            fclose(fOut);
+        #endif
     #endif
 
     return 0 ;
