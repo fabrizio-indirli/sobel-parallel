@@ -90,8 +90,14 @@ int main( int argc, char ** argv )
         MPI_Init(&argc, &argv);
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-        printf("\nHere");
     
+    if(my_rank==0) {
+        // hangs program: used only for debug purposes
+        int plop=1;
+        printf("my pid=%d\n", getpid());
+        while(plop==0) ;
+    }
+
         /*create a MPI type for struct pixel */
         #define N_ITEMS_PIXEL  3
         int blocklengths[3] = {1,1,1};
@@ -168,10 +174,7 @@ int main( int argc, char ** argv )
             num_nodes, n_imgs_init_node, n_imgs_per_node);
         #endif
         
-        pixel ** pts;
         int dims[2*n_imgs_per_node]; //vector 'sizes to send'
-        printf("Size of pixels matrix is: %d\n", sizeof(pixel *));
-
 
         for(i=1; i<num_nodes; i++){
             #ifdef MPI_VERSION
@@ -188,8 +191,10 @@ int main( int argc, char ** argv )
 
                 //send pixels to other processes
                 for(j=0; j < n_imgs_per_node; j++){
-                    MPI_Send(p[N_PREV_IMGS(i) + j], WID(j)*HEI(j), mpi_pixel_type, i,2, MPI_COMM_WORLD);
+                    MPI_Send(&(p[N_PREV_IMGS(i) + j]), WID(j)*HEI(j), mpi_pixel_type, i,2, MPI_COMM_WORLD);
+                    printf("\n++++++++++HERE++++++++++ %d\n", j);
                 }
+                
             #endif
         }
 
