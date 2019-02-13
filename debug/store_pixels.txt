@@ -1,0 +1,361 @@
+Running test on images/original/051009.vince.gif -> images/processed/051009.vince-sobel.gif
+salloc: Granted job allocation 236
+===ImageInfo===
+n_images = 1
+width = 1484
+height = 913
+GIF loaded from file images/original/051009.vince.gif with 1 image(s) in 0.015956 s
+GRAY FILTER done in 0.002309 s
+BLUR FILTER done in 0.046664 s
+SOBEL done in 0.050434 s
+    Export done in 0.231956 s in file images/processed/051009.vince-sobel.gif
+
+
+salloc: Relinquishing job allocation 236
+=====START=====
+Running test on images/original/1.gif -> images/processed/1-sobel.gif
+salloc: Granted job allocation 237
+===ImageInfo===
+n_images = 10
+width = 500
+height = 500
+GIF loaded from file images/original/1.gif with 10 image(s) in 0.024919 s
+GRAY FILTER done in 0.002195 s
+BLUR FILTER done in 0.089111 s
+SOBEL done in 0.095114 s
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    image->g->SavedImages[5].ExtensionBlockCount = 1
+    image->g->SavedImages[6].ExtensionBlockCount = 1
+    image->g->SavedImages[7].ExtensionBlockCount = 1
+    image->g->SavedImages[8].ExtensionBlockCount = 1
+    image->g->SavedImages[9].ExtensionBlockCount = 1
+    Export done in 0.144483 s in file images/processed/1-sobel.gif
+
+
+salloc: Relinquishing job allocation 237
+=====START=====
+Running test on images/original/200_s.gif -> images/processed/200_s-sobel.gif
+salloc: Granted job allocation 238
+===ImageInfo===
+n_images = 1
+width = 200
+height = 200
+GIF loaded from file images/original/200_s.gif with 1 image(s) in 0.000822 s
+GRAY FILTER done in 0.000160 s
+BLUR FILTER done in 0.000418 s
+SOBEL done in 0.000559 s
+    image->g->SavedImages[0].ExtensionBlockCount = 1
+    Export done in 0.001288 s in file images/processed/200_s-sobel.gif
+
+
+salloc: Relinquishing job allocation 238
+=====START=====
+Running test on images/original/9815573.gif -> images/processed/9815573-sobel.gif
+salloc: Granted job allocation 239
+===ImageInfo===
+n_images = 10
+width = 500
+height = 281
+GIF loaded from file images/original/9815573.gif with 10 image(s) in 0.017803 s
+GRAY FILTER done in 0.001372 s
+BLUR FILTER done in 0.023421 s
+SOBEL done in 0.026539 s
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    image->g->SavedImages[5].ExtensionBlockCount = 1
+    image->g->SavedImages[6].ExtensionBlockCount = 1
+    image->g->SavedImages[7].ExtensionBlockCount = 1
+    image->g->SavedImages[8].ExtensionBlockCount = 1
+    image->g->SavedImages[9].ExtensionBlockCount = 1
+    Export done in 0.076710 s in file images/processed/9815573-sobel.gif
+
+
+salloc: Relinquishing job allocation 239
+=====START=====
+Running test on images/original/australian-flag-large.gif -> images/processed/australian-flag-large-sobel.gif
+salloc: Granted job allocation 240
+===ImageInfo===
+n_images = 1
+width = 1200
+height = 600
+GIF loaded from file images/original/australian-flag-large.gif with 1 image(s) in 0.005600 s
+GRAY FILTER done in 0.000401 s
+BLUR FILTER done in 0.025135 s
+SOBEL done in 0.028140 s
+    image->g->SavedImages[0].ExtensionBlockCount = 1
+    Export done in 0.028150 s in file images/processed/australian-flag-large-sobel.gif
+
+
+salloc: Relinquishing job allocation 240
+=====START=====
+Running test on images/original/Campusplan-Hausnr.gif -> images/processed/Campusplan-Hausnr-sobel.gif
+salloc: Granted job allocation 241
+===ImageInfo===
+n_images = 1
+width = 9932
+height = 7016
+GIF loaded from file images/original/Campusplan-Hausnr.gif with 1 image(s) in 0.391722 s
+GRAY FILTER done in 0.062325 s
+BLUR FILTER done in 2.335929 s
+SOBEL done in 2.533169 s
+    image->g->SavedImages[0].ExtensionBlockCount = 1
+    Export done in 1.015411 s in file images/processed/Campusplan-Hausnr-sobel.gif
+
+
+salloc: Relinquishing job allocation 241
+=====START=====
+Running test on images/original/Campusplan-Mobilitaetsbeschraenkte.gif -> images/processed/Campusplan-Mobilitaetsbeschraenkte-sobel.gif
+salloc: Granted job allocation 242
+===ImageInfo===
+n_images = 1
+width = 9933
+height = 7016
+GIF loaded from file images/original/Campusplan-Mobilitaetsbeschraenkte.gif with 1 image(s) in 0.388939 s
+GRAY FILTER done in 0.062147 s
+BLUR FILTER done in 2.348721 s
+SOBEL done in 2.538241 s
+    image->g->SavedImages[0].ExtensionBlockCount = 1
+    Export done in 2.298238 s in file images/processed/Campusplan-Mobilitaetsbeschraenkte-sobel.gif
+
+
+salloc: Relinquishing job allocation 242
+=====START=====
+Running test on images/original/fire.gif -> images/processed/fire-sobel.gif
+salloc: Granted job allocation 243
+===ImageInfo===
+n_images = 33
+width = 30
+height = 60
+GIF loaded from file images/original/fire.gif with 33 image(s) in 0.001667 s
+GRAY FILTER done in 0.002466 s
+BLUR FILTER done in 0.002609 s
+SOBEL done in 0.002821 s
+    image->g->SavedImages[0].ExtensionBlockCount = 4
+    image->g->SavedImages[0].ExtensionBlockCount = 4
+    image->g->SavedImages[0].ExtensionBlockCount = 4
+    image->g->SavedImages[0].ExtensionBlockCount = 4
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    image->g->SavedImages[5].ExtensionBlockCount = 1
+    image->g->SavedImages[6].ExtensionBlockCount = 1
+    image->g->SavedImages[7].ExtensionBlockCount = 1
+    image->g->SavedImages[8].ExtensionBlockCount = 1
+    image->g->SavedImages[9].ExtensionBlockCount = 1
+    image->g->SavedImages[10].ExtensionBlockCount = 1
+    image->g->SavedImages[11].ExtensionBlockCount = 1
+    image->g->SavedImages[12].ExtensionBlockCount = 1
+    image->g->SavedImages[13].ExtensionBlockCount = 1
+    image->g->SavedImages[14].ExtensionBlockCount = 1
+    image->g->SavedImages[15].ExtensionBlockCount = 1
+    image->g->SavedImages[16].ExtensionBlockCount = 1
+    image->g->SavedImages[17].ExtensionBlockCount = 1
+    image->g->SavedImages[18].ExtensionBlockCount = 1
+    image->g->SavedImages[19].ExtensionBlockCount = 1
+    image->g->SavedImages[20].ExtensionBlockCount = 1
+    image->g->SavedImages[21].ExtensionBlockCount = 1
+    image->g->SavedImages[22].ExtensionBlockCount = 1
+    image->g->SavedImages[23].ExtensionBlockCount = 1
+    image->g->SavedImages[24].ExtensionBlockCount = 1
+    image->g->SavedImages[25].ExtensionBlockCount = 1
+    image->g->SavedImages[26].ExtensionBlockCount = 1
+    image->g->SavedImages[27].ExtensionBlockCount = 1
+    image->g->SavedImages[28].ExtensionBlockCount = 1
+    image->g->SavedImages[29].ExtensionBlockCount = 1
+    image->g->SavedImages[30].ExtensionBlockCount = 1
+    image->g->SavedImages[31].ExtensionBlockCount = 1
+    image->g->SavedImages[32].ExtensionBlockCount = 1
+    Export done in 0.004035 s in file images/processed/fire-sobel.gif
+
+
+salloc: Relinquishing job allocation 243
+=====START=====
+Running test on images/original/frame_002.gif -> images/processed/frame_002-sobel.gif
+salloc: Granted job allocation 244
+===ImageInfo===
+n_images = 1
+width = 585
+height = 450
+GIF loaded from file images/original/frame_002.gif with 1 image(s) in 0.002682 s
+GRAY FILTER done in 0.000671 s
+BLUR FILTER done in 0.002381 s
+SOBEL done in 0.003875 s
+    image->g->SavedImages[0].ExtensionBlockCount = 1
+    Export done in 0.005082 s in file images/processed/frame_002-sobel.gif
+
+
+salloc: Relinquishing job allocation 244
+=====START=====
+Running test on images/original/giphy-3.gif -> images/processed/giphy-3-sobel.gif
+salloc: Granted job allocation 245
+===ImageInfo===
+n_images = 5
+width = 1920
+height = 1080
+GIF loaded from file images/original/giphy-3.gif with 5 image(s) in 0.108234 s
+GRAY FILTER done in 0.014754 s
+BLUR FILTER done in 0.269760 s
+SOBEL done in 0.298716 s
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[0].ExtensionBlockCount = 15
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    Export done in 1.065161 s in file images/processed/giphy-3-sobel.gif
+
+
+salloc: Relinquishing job allocation 245
+=====START=====
+Running test on images/original/Mandelbrot-large.gif -> images/processed/Mandelbrot-large-sobel.gif
+salloc: Granted job allocation 246
+===ImageInfo===
+n_images = 20
+width = 1200
+height = 1200
+GIF loaded from file images/original/Mandelbrot-large.gif with 20 image(s) in 0.211764 s
+GRAY FILTER done in 0.028617 s
+BLUR FILTER done in 0.462575 s
+SOBEL done in 0.530317 s
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    image->g->SavedImages[5].ExtensionBlockCount = 1
+    image->g->SavedImages[6].ExtensionBlockCount = 1
+    image->g->SavedImages[7].ExtensionBlockCount = 1
+    image->g->SavedImages[8].ExtensionBlockCount = 1
+    image->g->SavedImages[9].ExtensionBlockCount = 1
+    image->g->SavedImages[10].ExtensionBlockCount = 1
+    image->g->SavedImages[11].ExtensionBlockCount = 1
+    image->g->SavedImages[12].ExtensionBlockCount = 1
+    image->g->SavedImages[13].ExtensionBlockCount = 1
+    image->g->SavedImages[14].ExtensionBlockCount = 1
+    image->g->SavedImages[15].ExtensionBlockCount = 1
+    image->g->SavedImages[16].ExtensionBlockCount = 1
+    image->g->SavedImages[17].ExtensionBlockCount = 1
+    image->g->SavedImages[18].ExtensionBlockCount = 1
+    image->g->SavedImages[19].ExtensionBlockCount = 1
+    Export done in 2.420057 s in file images/processed/Mandelbrot-large-sobel.gif
+
+
+salloc: Relinquishing job allocation 246
+=====START=====
+Running test on images/original/porsche.gif -> images/processed/porsche-sobel.gif
+salloc: Granted job allocation 247
+===ImageInfo===
+n_images = 1
+width = 320
+height = 200
+GIF loaded from file images/original/porsche.gif with 1 image(s) in 0.001086 s
+GRAY FILTER done in 0.000172 s
+BLUR FILTER done in 0.000772 s
+SOBEL done in 0.000977 s
+    Export done in 0.001691 s in file images/processed/porsche-sobel.gif
+
+
+salloc: Relinquishing job allocation 247
+=====START=====
+Running test on images/original/Produits_sous_linux.gif -> images/processed/Produits_sous_linux-sobel.gif
+salloc: Granted job allocation 248
+===ImageInfo===
+n_images = 1
+width = 800
+height = 950
+GIF loaded from file images/original/Produits_sous_linux.gif with 1 image(s) in 0.006238 s
+GRAY FILTER done in 0.000490 s
+BLUR FILTER done in 0.020630 s
+SOBEL done in 0.026412 s
+    image->g->SavedImages[0].ExtensionBlockCount = 1
+    Export done in 0.011720 s in file images/processed/Produits_sous_linux-sobel.gif
+
+
+salloc: Relinquishing job allocation 248
+=====START=====
+Running test on images/original/TimelyHugeGnu.gif -> images/processed/TimelyHugeGnu-sobel.gif
+salloc: Granted job allocation 249
+===ImageInfo===
+n_images = 19
+width = 640
+height = 360
+GIF loaded from file images/original/TimelyHugeGnu.gif with 19 image(s) in 0.061913 s
+GRAY FILTER done in 0.005879 s
+BLUR FILTER done in 0.054899 s
+SOBEL done in 0.066918 s
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    image->g->SavedImages[5].ExtensionBlockCount = 1
+    image->g->SavedImages[6].ExtensionBlockCount = 1
+    image->g->SavedImages[7].ExtensionBlockCount = 1
+    image->g->SavedImages[8].ExtensionBlockCount = 1
+    image->g->SavedImages[9].ExtensionBlockCount = 1
+    image->g->SavedImages[10].ExtensionBlockCount = 1
+    image->g->SavedImages[11].ExtensionBlockCount = 1
+    image->g->SavedImages[12].ExtensionBlockCount = 1
+    image->g->SavedImages[13].ExtensionBlockCount = 1
+    image->g->SavedImages[14].ExtensionBlockCount = 1
+    image->g->SavedImages[15].ExtensionBlockCount = 1
+    image->g->SavedImages[16].ExtensionBlockCount = 1
+    image->g->SavedImages[17].ExtensionBlockCount = 1
+    image->g->SavedImages[18].ExtensionBlockCount = 1
+    Export done in 0.451516 s in file images/processed/TimelyHugeGnu-sobel.gif
+
+
+salloc: Relinquishing job allocation 249
+=====START=====
+Running test on images/original/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large.gif -> images/processed/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large-sobel.gif
+salloc: Granted job allocation 250
+===ImageInfo===
+n_images = 10
+width = 480
+height = 480
+GIF loaded from file images/original/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large.gif with 10 image(s) in 0.025889 s
+GRAY FILTER done in 0.003776 s
+BLUR FILTER done in 0.057869 s
+SOBEL done in 0.062807 s
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[0].ExtensionBlockCount = 3
+    image->g->SavedImages[1].ExtensionBlockCount = 1
+    image->g->SavedImages[2].ExtensionBlockCount = 1
+    image->g->SavedImages[3].ExtensionBlockCount = 1
+    image->g->SavedImages[4].ExtensionBlockCount = 1
+    image->g->SavedImages[5].ExtensionBlockCount = 1
+    image->g->SavedImages[6].ExtensionBlockCount = 1
+    image->g->SavedImages[7].ExtensionBlockCount = 1
+    image->g->SavedImages[8].ExtensionBlockCount = 1
+    image->g->SavedImages[9].ExtensionBlockCount = 1
+    Export done in 0.444694 s in file images/processed/tumblr_myxlbtwVEb1qzt4vjo1_r14_500_large-sobel.gif

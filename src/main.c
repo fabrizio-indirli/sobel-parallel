@@ -13,7 +13,7 @@
 #include <gif_lib.h>
 
 
-#define SOBELF_DEBUG 1
+#define SOBELF_DEBUG 0
 
 /* Represent one pixel from the image */
 typedef struct pixel
@@ -286,6 +286,8 @@ store_pixels( char * filename, animated_gif * image )
         colormap[i].Blue = 255 ;
     }
 
+
+    /******************************** CHANGE BACKGROUND ********************************/
     /* Change the background color and store it */
     int moy ;
     moy = (
@@ -312,8 +314,20 @@ store_pixels( char * filename, animated_gif * image )
 
     image->g->SBackGroundColor = 0 ;
 
-    n_colors++ ;
+    n_colors++ ; // n_colors==1
+    /******************************** CHANGE BACKGROUND ********************************/
 
+
+
+
+    /******************************** EXTENTION BLOCK ********************************/
+    /* There is only one case!
+     *
+     * image->g->ExtensionBlockCount = 1
+     * 
+     * Export done in 0.003056 s in file images/processed/fire-sobel.gif
+     */
+    // printf("\n\nimage->g->ExtensionBlockCount = %d\n\n", image->g->ExtensionBlockCount );
     /* Process extension blocks in main structure */
     for ( j = 0 ; j < image->g->ExtensionBlockCount ; j++ )
     {
@@ -352,7 +366,7 @@ store_pixels( char * filename, animated_gif * image )
 
                 for ( k = 0 ; k < n_colors ; k++ )
                 {
-                    if (
+                    if ( // 
                             moy == colormap[k].Red
                             &&
                             moy == colormap[k].Green
@@ -360,10 +374,14 @@ store_pixels( char * filename, animated_gif * image )
                             moy == colormap[k].Blue
                        )
                     {
-                        found = k ;
+                        found = k ; //*** FOUND!!
                     }
                 }
-                if ( found == -1  )
+
+
+
+                /******** var. found ********/
+                if ( found == -1  ) //*** NOT FOUND
                 {
                     if ( n_colors >= 256 )
                     {
@@ -386,7 +404,7 @@ store_pixels( char * filename, animated_gif * image )
                     image->g->ExtensionBlocks[j].Bytes[3] = n_colors ;
 
                     n_colors++ ;
-                } else // if ( found == 0  )
+                } else //*** if ( found != -1  )
                 {
 #if SOBELF_DEBUG
                     printf( "[DEBUG]\tFound existing color %d\n",
@@ -394,14 +412,22 @@ store_pixels( char * filename, animated_gif * image )
 #endif
                     image->g->ExtensionBlocks[j].Bytes[3] = found ;
                 }
-            }
+
+            } // ENDs if ( tr_color >= 0 && tr_color < 255 )
         } // f = image->g->ExtensionBlocks[j].Function ; if ( f == GRAPHICS_EXT_FUNC_CODE )
     }
+    /******************************** EXTENTION BLOCK ********************************/
 
+
+
+
+    
+    
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         for ( j = 0 ; j < image->g->SavedImages[i].ExtensionBlockCount ; j++ )
         {
+            printf("image->g->SavedImages[%d].ExtensionBlockCount = %d\n", i, image->g->SavedImages[i].ExtensionBlockCount );
             int f ;
 
             f = image->g->SavedImages[i].ExtensionBlocks[j].Function ;
@@ -488,6 +514,17 @@ store_pixels( char * filename, animated_gif * image )
     printf( "[DEBUG] Number of colors after background and transparency: %d\n",
             n_colors ) ;
 #endif
+
+
+
+
+
+
+
+
+
+
+
 
     p = image->p ;
 
