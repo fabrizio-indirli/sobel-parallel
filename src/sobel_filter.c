@@ -55,14 +55,20 @@ void apply_sobel_filter(int width, int height, pixel * pi){
                         sobel[CONV(j  ,k  ,width)].g = 0 ;
                         sobel[CONV(j  ,k  ,width)].b = 0 ;
                     }
-
-                    //*** Replacing pixel values. (Merged loop)
-                    pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
-                    pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
-                    pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
                 }
             }
-        } // #pragma omp parallel ends
-        free (sobel) ;
 
+            #pragma omp for collapse(2) schedule(static)
+            for(j=1; j<height-1; j++)
+            {
+                for(k=1; k<width-1; k++)
+                {
+                    p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+                    p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+                    p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+                }
+            }
+        }
+    } // #pragma omp parallel ends
+    free (sobel) ;
 }
