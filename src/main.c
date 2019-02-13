@@ -422,12 +422,13 @@ store_pixels( char * filename, animated_gif * image )
 
 
     
-    
+    /******************************** SAVED IMAGE EXTENTION BLOCK ********************************/
+    /******************************** NEW COLOR ********************************/
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         for ( j = 0 ; j < image->g->SavedImages[i].ExtensionBlockCount ; j++ )
         {
-            printf("image->g->SavedImages[%d].ExtensionBlockCount = %d\n", i, image->g->SavedImages[i].ExtensionBlockCount );
+            //*** printf("image->g->SavedImages[%d].ExtensionBlockCount = %d\n", i, image->g->SavedImages[i].ExtensionBlockCount ); -> debug/store_pixels.txt
             int f ;
 
             f = image->g->SavedImages[i].ExtensionBlocks[j].Function ;
@@ -515,6 +516,7 @@ store_pixels( char * filename, animated_gif * image )
             n_colors ) ;
 #endif
 
+    /******************************** SAVED IMAGE EXTENTION BLOCK ********************************/
 
 
 
@@ -525,9 +527,10 @@ store_pixels( char * filename, animated_gif * image )
 
 
 
+    p = image->p ; //*** struct pixel
 
-    p = image->p ;
 
+    /******************************** NUMBER OF COLORS ********************************/
     /* Find the number of colors inside the image */
     for ( i = 0 ; i < image->n_images ; i++ )
     {
@@ -540,11 +543,11 @@ store_pixels( char * filename, animated_gif * image )
         for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
         {
             int found = 0 ;
-            for ( k = 0 ; k < n_colors ; k++ )
+            for ( k = 0 ; k < n_colors ; k++ ) //*** Remind that `n_colors` has been accumulated through above processes. 
             {
                 if ( p[i][j].r == colormap[k].Red &&
-                        p[i][j].g == colormap[k].Green &&
-                        p[i][j].b == colormap[k].Blue )
+                     p[i][j].g == colormap[k].Green &&
+                     p[i][j].b == colormap[k].Blue )
                 {
                     found = 1 ;
                 }
@@ -560,7 +563,7 @@ store_pixels( char * filename, animated_gif * image )
                     return 0 ;
                 }
 
-#if SOBELF_DEBUG
+#if SOBELF_DEBUG //*** Finding new color happens very often
                 printf( "[DEBUG] Found new %d color (%d,%d,%d)\n",
                         n_colors, p[i][j].r, p[i][j].g, p[i][j].b ) ;
 #endif
@@ -576,22 +579,26 @@ store_pixels( char * filename, animated_gif * image )
 #if SOBELF_DEBUG
     printf( "OUTPUT: found %d color(s)\n", n_colors ) ;
 #endif
+    /******************************** NUMBER OF COLORS ********************************/
 
 
+
+
+    /******************************** NEW COLORMAP ********************************/
     /* Round up to a power of 2 */
     if ( n_colors != (1 << GifBitSize(n_colors) ) )
     {
         n_colors = (1 << GifBitSize(n_colors) ) ;
     }
 
-#if SOBELF_DEBUG
+#if SOBELF_DEBUG //*** When new colors are founded, it rounds up to the new number of colors.
     printf( "OUTPUT: Rounding up to %d color(s)\n", n_colors ) ;
 #endif
 
     /* Change the color map inside the animated gif */
     ColorMapObject * cmo ;
 
-    cmo = GifMakeMapObject( n_colors, colormap ) ;
+    cmo = GifMakeMapObject( n_colors, colormap ) ; //***
     if ( cmo == NULL )
     {
         fprintf( stderr, "Error while creating a ColorMapObject w/ %d color(s)\n",
@@ -600,6 +607,10 @@ store_pixels( char * filename, animated_gif * image )
     }
 
     image->g->SColorMap = cmo ;
+    /******************************** NEW COLORMAP ********************************/
+
+
+
 
     /* Update the raster bits according to color map */
     for ( i = 0 ; i < image->n_images ; i++ )
@@ -610,8 +621,8 @@ store_pixels( char * filename, animated_gif * image )
             for ( k = 0 ; k < n_colors ; k++ )
             {
                 if ( p[i][j].r == image->g->SColorMap->Colors[k].Red &&
-                        p[i][j].g == image->g->SColorMap->Colors[k].Green &&
-                        p[i][j].b == image->g->SColorMap->Colors[k].Blue )
+                     p[i][j].g == image->g->SColorMap->Colors[k].Green &&
+                     p[i][j].b == image->g->SColorMap->Colors[k].Blue )
                 {
                     found_index = k ;
                 }
@@ -630,7 +641,7 @@ store_pixels( char * filename, animated_gif * image )
 
 
     /* Write the final image */
-    if ( !output_modified_read_gif( filename, image->g ) ) { return 0 ; }
+    if ( !output_modified_read_gif( filename, image->g ) ) { return 0 ; } //*** GifFileType * g ;
 
     return 1 ;
 }
@@ -875,23 +886,23 @@ apply_sobel_filter( animated_gif * image )
                         sobel[CONV(j  ,k  ,width)].b = 0 ;
                     }
 
-                    //*** Replacing pixel values. (Merged loop)
+                    // //*** Replacing pixel values. (Merged loop) WRONG
+                    // p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+                    // p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+                    // p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+                }
+            }
+            
+            #pragma omp for collapse(2) schedule(static)
+            for(j=1; j<height-1; j++)
+            {
+                for(k=1; k<width-1; k++)
+                {
                     p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
                     p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
                     p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
                 }
             }
-            //*** Merged with the above loop. Got faster
-            // #pragma omp for collapse(2) schedule(static)
-            // for(j=1; j<height-1; j++)
-            // {
-            //     for(k=1; k<width-1; k++)
-            //     {
-            //         p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
-            //         p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
-            //         p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
-            //     }
-            // }
         } // #pragma omp parallel ends
         free (sobel) ;
     }
@@ -903,7 +914,7 @@ int main( int argc, char ** argv )
 
     char * input_filename ;
     char * output_filename ;
-    animated_gif * image ; //*** image!
+    animated_gif * image ; //*** An array of images!
     struct timeval t1, t2;
     double duration ;
 
