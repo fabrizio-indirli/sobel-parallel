@@ -22,7 +22,7 @@
 
 #define SOBELF_DEBUG 0
 #define LOGGING 0
-#define ENABLED 1
+#define EXPORT 1
 #define MPI_DEBUG 1
 #define GDB_DEBUG 0
 
@@ -92,16 +92,15 @@ int main( int argc, char ** argv )
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     
-    #if GDB_DEBUG
-        if(my_rank==0) {
-            // hangs program: used only for debug purposes
-            int plop=1;
-            printf("my pid=%d\n", getpid());
-            while(plop==0) ;
-        }
-    #endif
+        #if GDB_DEBUG
+            if(my_rank==0) {
+                // hangs program: used only for debug purposes
+                int plop=1;
+                printf("my pid=%d\n", getpid());
+                while(plop==0) ;
+            }
+        #endif
     
-
         /*create a MPI type for struct pixel */
         #define N_ITEMS_PIXEL  3
         int blocklengths[3] = {1,1,1};
@@ -113,6 +112,7 @@ int main( int argc, char ** argv )
         offsets[2] = offsetof(pixel,b);
         MPI_Type_create_struct(N_ITEMS_PIXEL, blocklengths, offsets, types, &mpi_pixel_type);
         MPI_Type_commit(&mpi_pixel_type);
+
     #else
         num_nodes = 1;
         my_rank = 0;
@@ -149,7 +149,6 @@ int main( int argc, char ** argv )
     }
 
     
-
     /* FILTER Timer start */
     gettimeofday(&t0, NULL);
 
@@ -199,7 +198,6 @@ int main( int argc, char ** argv )
                 //send pixels to other processes
                 for(j=0; j < n_imgs_per_node; j++){ 
                     MPI_Send(p[N_PREV_IMGS(i) + j], WID(j)*HEI(j), mpi_pixel_type, i,2, MPI_COMM_WORLD);
-                    printf("\n++++++++++HERE++++++++++ %d\n", j);
                 }
                 
             #endif
@@ -208,10 +206,14 @@ int main( int argc, char ** argv )
         // node 0 computes filters on its images
         apply_all_filters(image->width, image->height, p, n_imgs_init_node);
 
+        // macros to extract images' sizes now that the dims vector is not available
+        #define W0(i,j) image->width[(N_PREV_IMGS(i))+(j)]
+        #define H0(i,j) image->height[(N_PREV_IMGS(i))+(j)]
+
         // receive images from all the other nodes
         for(i=1; i < num_nodes; i++){
             for(j=0; j < n_imgs_per_node; j++){
-                MPI_Recv(p[N_PREV_IMGS(i) + j], WID(j)*HEI(j), mpi_pixel_type, i,3, MPI_COMM_WORLD, &comm_status);
+                MPI_Recv(p[N_PREV_IMGS(i) + j], W0(i,j)*H0(i,j), mpi_pixel_type, i,3, MPI_COMM_WORLD, &comm_status);
             }
         }
 
@@ -251,9 +253,7 @@ int main( int argc, char ** argv )
             #endif
     }
 
-    // MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
-    printf("Process with rank %d has passed the barrier\n", my_rank);
     if(my_rank > 0) return 0;
     /***** End of parallelized version of filters *****/
 
@@ -265,7 +265,7 @@ int main( int argc, char ** argv )
         appendNumToRow(duration);
     #endif
 
-    #if ENABLED
+    #if EXPORT
 
         /* EXPORT Timer start */
         gettimeofday(&t1, NULL);
