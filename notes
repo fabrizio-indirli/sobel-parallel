@@ -10,6 +10,10 @@ Simple OpenMP parallel for:
 	Time needed to apply grey & sobel filters
 		- dynamic scheduling:
 
+MPI on big image (Mandelbrot-large.gif) with 4 processes:
+	- with MPI_Send: 5.760411 s
+	- with MPI_ISend: 7.84 s
+
 
 
 TO RUN:
