@@ -10,3 +10,7 @@ Simple OpenMP parallel for:
 	Time needed to apply grey & sobel filters
 		- dynamic scheduling:
 
+
+
+TO RUN:
+mpirun -np 2 ./sobelf images/original/Mandelbrot-large.gif images/processed/prova.gif
