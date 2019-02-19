@@ -14,8 +14,8 @@ for i in $INPUT_DIR/*gif ; do
     DEST=$OUTPUT_DIR/`basename $i .gif`-sobel.gif
     echo "=====START====="
     echo "Running test on $i -> $DEST"
-    #echo -n $i >> test_result.csv
-    echo $i >> test_result.txt
+    # echo -n $i >> test_result.csv
+    # echo $i >> test_result.txt
 
     ./sobelf $i $DEST
     # salloc -n 1 ./sobelf $i $DEST

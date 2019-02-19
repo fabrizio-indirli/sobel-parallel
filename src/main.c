@@ -915,7 +915,8 @@ int main( int argc, char ** argv )
     char * input_filename ;
     char * output_filename ;
     animated_gif * image ; //*** An array of images!
-    struct timeval t1, t2;
+    // struct timeval t1, t2;
+    struct timeval t0, t1, t2;
     double duration ;
 
     char * description;
@@ -941,6 +942,7 @@ int main( int argc, char ** argv )
 
 
     /* IMPORT Timer start */
+    gettimeofday(&t0, NULL); // start timer
     gettimeofday(&t1, NULL);
 
     /* Load file and store the pixels in array */
@@ -955,7 +957,7 @@ int main( int argc, char ** argv )
     printf( "GIF loaded from file %s with %d image(s) in %lf s\n",
             input_filename, image->n_images, duration ) ;
     // fprintf(fptr,"\t %f", duration);
-    fprintf(fptr,", \t %f", duration);
+    fprintf(fptr,"\t %f", duration);
 
 
     /* FILTER Timer start */
@@ -973,6 +975,8 @@ int main( int argc, char ** argv )
 
 
     /* Apply blur filter with convergence value */
+    gettimeofday(&t1, NULL);
+
     apply_blur_filter( image, 5, 20 ) ;
 
     gettimeofday(&t2, NULL);
@@ -985,16 +989,20 @@ int main( int argc, char ** argv )
 
 
     /* Apply sobel filter on pixels */
+    gettimeofday(&t1, NULL);
+
     apply_sobel_filter( image ) ;
 
     /* FILTER Timer stop */
     gettimeofday(&t2, NULL);
 
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-
+    double durFilters = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
     printf( "SOBEL done in %lf s\n", duration ) ;
+    printf( "SO FAR done in %lf s\n",  durFilters) ;
     // fprintf(fptr,"\t %f", duration);
     fprintf(fptr,", \t %f", duration);
+    fprintf(fptr,", \t %f", durFilters);
 
 
 
@@ -1012,7 +1020,7 @@ int main( int argc, char ** argv )
 
     printf( "Export done in %lf s in file %s\n\n\n", duration, output_filename ) ;
     // fprintf(fptr,"\t %f\n\n", duration);
-    fprintf(fptr,", \t %f\n", duration);
+    fprintf(fptr,"\t %f\n", duration);
     fclose(fptr);
 
 
