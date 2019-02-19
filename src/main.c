@@ -457,8 +457,7 @@ store_pixels( char * filename, animated_gif * image )
                             image->g->SColorMap->Colors[ tr_color ].Blue,
                             moy, moy, moy ) ;
 #endif
-                    printf("k < n_colors = %d", n_colors);
-                    for ( k = 0 ; k < n_colors ; k++ )
+                    for ( k = 0 ; k < n_colors ; k++ ) //*** most of the time 0... or 1 or 2. 
                     {
                         if (
                                 moy == colormap[k].Red
@@ -536,8 +535,11 @@ store_pixels( char * filename, animated_gif * image )
         printf( "OUTPUT: Processing image %d (total of %d images) -> %d x %d\n",
                 i, image->n_images, image->width[i], image->height[i] ) ;
 #endif
-
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
+        int width = image->width[i];
+        int height = image->height[i];
+        int omp_n_colors = 0;
+        #pragma omp parallel for reduction(+:omp_n_colors) schedule(static) default(none) private(j,k) shared(i,p,colormap,width,height)
+        for ( j = 0 ; j < width * height ; j++ )
         {
             int found = 0 ;
             for ( k = 0 ; k < n_colors ; k++ ) //*** Remind that `n_colors` has been accumulated through above processes. 
@@ -550,15 +552,15 @@ store_pixels( char * filename, animated_gif * image )
                 }
             }
 
-            if ( found == 0 )
+            if ( found == 0 ) //*** meaning that it found a new color.
             {
-                if ( n_colors >= 256 )
-                {
-                    fprintf( stderr,
-                            "Error: Found too many colors inside the image\n"
-                           ) ;
-                    return 0 ;
-                }
+                // if ( n_colors >= 256 )
+                // {
+                //     fprintf( stderr,
+                //             "Error: Found too many colors inside the image\n"
+                //            ) ;
+                //     return 0 ;
+                // }
 
 #if SOBELF_DEBUG //*** Finding new color happens very often
                 printf( "[DEBUG] Found new %d color (%d,%d,%d)\n",
@@ -568,8 +570,18 @@ store_pixels( char * filename, animated_gif * image )
                 colormap[n_colors].Red = p[i][j].r ;
                 colormap[n_colors].Green = p[i][j].g ;
                 colormap[n_colors].Blue = p[i][j].b ;
-                n_colors++ ;
+                // n_colors++ ; 
+                omp_n_colors = omp_n_colors + 1; //*** reduction
             }
+        }
+        //*** MOVED. `omp_n_colors` reduced. 
+        n_colors += omp_n_colors;
+        if ( n_colors >= 256 ) //*** now dectecting `n_colors` every image, instead of every pixel. 
+        {
+            fprintf( stderr,
+                    "Error: Found too many colors inside the image\n"
+                    ) ;
+            return 0 ;
         }
     }
 

@@ -1,0 +1,11 @@
+
+
+/* Write the final image */
+output_modified_read_gif( filename, image->g )
+    g2 = EGifOpenFileName( filename, false, &error2 ) ;
+    .
+    .
+    .
+    EGifSpew( g2 );
+
+
