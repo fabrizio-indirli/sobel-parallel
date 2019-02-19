@@ -158,12 +158,6 @@ load_pixels( char * filename )
         }
     }
 
-    //***
-    // printf("sizeof(p): %d\n", sizeof(p));
-    // for ( i = 0 ; i < n_images ; i++ )
-    // {
-    //     printf("sizeof(p[i]) = %d\n", sizeof(p[i]));
-    // }
     
 
     /* Fill pixels */
@@ -230,7 +224,7 @@ output_modified_read_gif( char * filename, GifFileType * g )
     printf( "Starting output to file %s\n", filename ) ;
 #endif
 
-    g2 = EGifOpenFileName( filename, false, &error2 ) ;
+    g2 = EGifOpenFileName( filename, false, &error2 ) ; //*** from `egif_lib.c`. Returns GifFileType *GifFile;
     if ( g2 == NULL )
     {
         fprintf( stderr, "Error EGifOpenFileName %s\n",
@@ -249,7 +243,7 @@ output_modified_read_gif( char * filename, GifFileType * g )
     g2->ExtensionBlockCount = g->ExtensionBlockCount ;
     g2->ExtensionBlocks = g->ExtensionBlocks ;
 
-    error2 = EGifSpew( g2 ) ;
+    error2 = EGifSpew( g2 ) ; //* Cannot parallelize?
     if ( error2 != GIF_OK )
     {
         fprintf( stderr, "Error after writing g2: %d <%s>\n",
@@ -279,6 +273,7 @@ store_pixels( char * filename, animated_gif * image )
     }
 
     /* Everything is white by default */
+    #pragma omp parallel for schedule(static) default(none) private(i) shared(colormap) //*** looks trivial. 
     for ( i = 0 ; i < 256 ; i++ )
     {
         colormap[i].Red = 255 ;
@@ -424,11 +419,12 @@ store_pixels( char * filename, animated_gif * image )
     
     /******************************** SAVED IMAGE EXTENTION BLOCK ********************************/
     /******************************** NEW COLOR ********************************/
-    for ( i = 0 ; i < image->n_images ; i++ )
+    for ( i = 0 ; i < image->n_images ; i++ ) //*MPI
     {
         for ( j = 0 ; j < image->g->SavedImages[i].ExtensionBlockCount ; j++ )
         {
             //*** printf("image->g->SavedImages[%d].ExtensionBlockCount = %d\n", i, image->g->SavedImages[i].ExtensionBlockCount ); -> debug/store_pixels.txt
+            //*** `giphy-3.gif` can be far improved since it has many ExtensionBlockCount... The others don't. 
             int f ;
 
             f = image->g->SavedImages[i].ExtensionBlocks[j].Function ;
@@ -461,7 +457,7 @@ store_pixels( char * filename, animated_gif * image )
                             image->g->SColorMap->Colors[ tr_color ].Blue,
                             moy, moy, moy ) ;
 #endif
-
+                    printf("k < n_colors = %d", n_colors);
                     for ( k = 0 ; k < n_colors ; k++ )
                     {
                         if (
@@ -475,6 +471,7 @@ store_pixels( char * filename, animated_gif * image )
                             found = k ;
                         }
                     }
+
                     if ( found == -1  )
                     {
                         if ( n_colors >= 256 )
@@ -527,12 +524,12 @@ store_pixels( char * filename, animated_gif * image )
 
 
 
-    p = image->p ; //*** struct pixel
+    p = image->p ; //*** (struct) pixel p;
 
 
     /******************************** NUMBER OF COLORS ********************************/
     /* Find the number of colors inside the image */
-    for ( i = 0 ; i < image->n_images ; i++ )
+    for ( i = 0 ; i < image->n_images ; i++ ) //*MPI
     {
 
 #if SOBELF_DEBUG
@@ -613,7 +610,7 @@ store_pixels( char * filename, animated_gif * image )
 
 
     /* Update the raster bits according to color map */
-    for ( i = 0 ; i < image->n_images ; i++ )
+    for ( i = 0 ; i < image->n_images ; i++ ) //*MPI
     {
         for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
         {
