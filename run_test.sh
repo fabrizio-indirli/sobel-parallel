@@ -17,8 +17,8 @@ for i in $INPUT_DIR/*gif ; do
     #echo -n $i >> test_result.csv
     echo $i >> test_result.txt
 
-    # ./sobelf $i $DEST
-    salloc -n 1 ./sobelf $i $DEST
+    ./sobelf $i $DEST
+    # salloc -n 1 ./sobelf $i $DEST
 done
 
 echo "=====DONE=====" >> test_result.txt

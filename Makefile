@@ -3,7 +3,7 @@ HEADER_DIR=include
 OBJ_DIR=obj
 
 CC=gcc
-CFLAGS=-fopenmp -O3 -I$(HEADER_DIR)
+CFLAGS=-fopenmp -O3 -I$(HEADER_DIR) -Wall
 #CFLAGS=-O3 -I$(HEADER_DIR)
 LDFLAGS=-lm
 
@@ -36,7 +36,7 @@ $(OBJ_DIR)/%.o : $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 sobelf:$(OBJ)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f sobelf $(OBJ)
