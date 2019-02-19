@@ -1089,7 +1089,8 @@ EGifSpew(GifFileType *GifFileOut)
         return (GIF_ERROR);
     }
 
-    for (i = 0; i < GifFileOut->ImageCount; i++) {
+    for (i = 0; i < GifFileOut->ImageCount; i++) //***MPI
+    { 
         SavedImage *sp = &GifFileOut->SavedImages[i];
         int SavedHeight = sp->ImageDesc.Height;
         int SavedWidth = sp->ImageDesc.Width;
@@ -1098,52 +1099,52 @@ EGifSpew(GifFileType *GifFileOut)
         if (sp->RasterBits == NULL)
             continue;
 
-	if (EGifWriteExtensions(GifFileOut, 
-				sp->ExtensionBlocks,
-				sp->ExtensionBlockCount) == GIF_ERROR)
-	    return (GIF_ERROR);
-
-        if (EGifPutImageDesc(GifFileOut,
-                             sp->ImageDesc.Left,
-                             sp->ImageDesc.Top,
-                             SavedWidth,
-                             SavedHeight,
-                             sp->ImageDesc.Interlace,
-                             sp->ImageDesc.ColorMap) == GIF_ERROR)
+        if (EGifWriteExtensions(GifFileOut, 
+                    sp->ExtensionBlocks,
+                    sp->ExtensionBlockCount) == GIF_ERROR)
             return (GIF_ERROR);
 
-	if (sp->ImageDesc.Interlace) {
-	     /* 
-	      * The way an interlaced image should be written - 
-	      * offsets and jumps...
-	      */
-	    int InterlacedOffset[] = { 0, 4, 2, 1 };
-	    int InterlacedJumps[] = { 8, 8, 4, 2 };
-	    int k;
-	    /* Need to perform 4 passes on the images: */
-	    for (k = 0; k < 4; k++)
-		for (j = InterlacedOffset[k]; 
-		     j < SavedHeight;
-		     j += InterlacedJumps[k]) {
-		    if (EGifPutLine(GifFileOut, 
-				    sp->RasterBits + j * SavedWidth, 
-				    SavedWidth)	== GIF_ERROR)
-			return (GIF_ERROR);
-		}
-	} else {
-	    for (j = 0; j < SavedHeight; j++) {
-		if (EGifPutLine(GifFileOut,
-				sp->RasterBits + j * SavedWidth,
-				SavedWidth) == GIF_ERROR)
-		    return (GIF_ERROR);
-	    }
-	}
+            if (EGifPutImageDesc(GifFileOut,
+                                sp->ImageDesc.Left,
+                                sp->ImageDesc.Top,
+                                SavedWidth,
+                                SavedHeight,
+                                sp->ImageDesc.Interlace,
+                                sp->ImageDesc.ColorMap) == GIF_ERROR)
+                return (GIF_ERROR);
+
+        if (sp->ImageDesc.Interlace) {
+            /* 
+            * The way an interlaced image should be written - 
+            * offsets and jumps...
+            */
+            int InterlacedOffset[] = { 0, 4, 2, 1 };
+            int InterlacedJumps[] = { 8, 8, 4, 2 };
+            int k;
+            /* Need to perform 4 passes on the images: */
+            for (k = 0; k < 4; k++)
+            for (j = InterlacedOffset[k]; 
+                j < SavedHeight;
+                j += InterlacedJumps[k]) {
+                if (EGifPutLine(GifFileOut, 
+                        sp->RasterBits + j * SavedWidth, 
+                        SavedWidth)	== GIF_ERROR)
+                return (GIF_ERROR);
+            }
+        } else {
+            for (j = 0; j < SavedHeight; j++) {
+            if (EGifPutLine(GifFileOut,
+                    sp->RasterBits + j * SavedWidth,
+                    SavedWidth) == GIF_ERROR)
+                return (GIF_ERROR);
+            }
+        }
     }
 
     if (EGifWriteExtensions(GifFileOut,
-			    GifFileOut->ExtensionBlocks,
-			    GifFileOut->ExtensionBlockCount) == GIF_ERROR)
-	return (GIF_ERROR);
+                GifFileOut->ExtensionBlocks,
+                GifFileOut->ExtensionBlockCount) == GIF_ERROR)
+    return (GIF_ERROR);
 
     if (EGifCloseFile(GifFileOut, NULL) == GIF_ERROR)
         return (GIF_ERROR);
