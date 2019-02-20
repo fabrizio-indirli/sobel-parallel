@@ -537,8 +537,7 @@ store_pixels( char * filename, animated_gif * image )
 #endif
         int width = image->width[i];
         int height = image->height[i];
-        int omp_n_colors = 0;
-        #pragma omp parallel for reduction(+:omp_n_colors) schedule(static) default(none) private(j,k) shared(i,p,colormap,width,height)
+        #pragma omp parallel for schedule(static) default(none) private(j,k) shared(i,p,colormap,width,height,n_colors,stderr)
         for ( j = 0 ; j < width * height ; j++ )
         {
             int found = 0 ;
@@ -554,37 +553,41 @@ store_pixels( char * filename, animated_gif * image )
 
             if ( found == 0 ) //*** meaning that it found a new color.
             {
-                // if ( n_colors >= 256 )
-                // {
-                //     fprintf( stderr,
-                //             "Error: Found too many colors inside the image\n"
-                //            ) ;
-                //     return 0 ;
-                // }
-
+                if ( n_colors < 256 )
+                {
 #if SOBELF_DEBUG //*** Finding new color happens very often
                 printf( "[DEBUG] Found new %d color (%d,%d,%d)\n",
                         n_colors, p[i][j].r, p[i][j].g, p[i][j].b ) ;
 #endif
 
-                colormap[n_colors].Red = p[i][j].r ;
-                colormap[n_colors].Green = p[i][j].g ;
-                colormap[n_colors].Blue = p[i][j].b ;
-                // n_colors++ ; 
-                omp_n_colors = omp_n_colors + 1; //*** reduction
-            }
-        }
-        //*** MOVED. `omp_n_colors` reduced. 
-        n_colors += omp_n_colors;
-        if ( n_colors >= 256 ) //*** now dectecting `n_colors` every image, instead of every pixel. 
+                    colormap[n_colors].Red = p[i][j].r ;
+                    colormap[n_colors].Green = p[i][j].g ;
+                    colormap[n_colors].Blue = p[i][j].b ;
+                }
+                // if ( n_colors >= 256 )
+                // {
+                //     //* Base code
+                //     // fprintf( stderr,
+                //     //         "Error: Found too many colors inside the image\n"
+                //     //        ) ;
+                //     // return 0 ; //***  error: invalid branch to/from OpenMP structured block
+                // }
+                #pragma omp atomic
+                    n_colors++ ; 
+                printf("Rank : %d; n_colors : %d\n", omp_get_thread_num(), n_colors);
+            } //*** `n_colors` is atomically reduced. 
+        } //*** omp for ends. 
+        
+        //* Cannot use 'return' or 'break' in omp for
+        if (n_colors > 256) //*** equal removed due to the sequential relation with 'if ( fouund == 0 )'
         {
             fprintf( stderr,
                     "Error: Found too many colors inside the image\n"
                     ) ;
-            return 0 ;
+            return 0;
         }
     }
-
+    printf( "OUTPUT: found %d color(s)\n", n_colors ) ;
 #if SOBELF_DEBUG
     printf( "OUTPUT: found %d color(s)\n", n_colors ) ;
 #endif
@@ -624,7 +627,10 @@ store_pixels( char * filename, animated_gif * image )
     /* Update the raster bits according to color map */
     for ( i = 0 ; i < image->n_images ; i++ ) //*MPI
     {
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
+        int width = image->width[i];
+        int height = image->height[i];
+
+        for ( j = 0 ; j < width * height ; j++ )
         {
             int found_index = -1 ;
             for ( k = 0 ; k < n_colors ; k++ )
