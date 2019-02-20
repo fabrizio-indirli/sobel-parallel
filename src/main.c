@@ -179,7 +179,10 @@ load_pixels( char * filename )
         }
 
         /* Traverse the image and fill pixels */
-        for ( j = 0 ; j < width[i] * height[i] ; j++ )
+        int width_i = width[i];
+        int height_i = height[i];
+        #pragma omp parallel for schedule(static) default(none) private(j) firstprivate(width_i,height_i) shared(i,g,p,colmap)
+        for ( j = 0 ; j < width_i * height_i ; j++ )
         {
             int c ;
 
