@@ -574,7 +574,8 @@ store_pixels( char * filename, animated_gif * image )
                 // }
                 #pragma omp atomic
                     n_colors++ ; 
-                printf("Rank : %d; n_colors : %d\n", omp_get_thread_num(), n_colors);
+                //*** LOG
+                // printf("Rank : %d; n_colors : %d\n", omp_get_thread_num(), n_colors);
             } //*** `n_colors` is atomically reduced. 
         } //*** omp for ends. 
         
@@ -587,7 +588,7 @@ store_pixels( char * filename, animated_gif * image )
             return 0;
         }
     }
-    printf( "OUTPUT: found %d color(s)\n", n_colors ) ;
+
 #if SOBELF_DEBUG
     printf( "OUTPUT: found %d color(s)\n", n_colors ) ;
 #endif
@@ -629,7 +630,8 @@ store_pixels( char * filename, animated_gif * image )
     {
         int width = image->width[i];
         int height = image->height[i];
-
+        int found_flag = 1;
+        #pragma omp parallel for reduction(&&:found_flag) schedule(static) default(none) private(j,k) shared(i,width,height,p,image,n_colors,stderr)
         for ( j = 0 ; j < width * height ; j++ )
         {
             int found_index = -1 ;
@@ -640,17 +642,28 @@ store_pixels( char * filename, animated_gif * image )
                      p[i][j].b == image->g->SColorMap->Colors[k].Blue )
                 {
                     found_index = k ;
-                }
-            }
+                } 
+                // else { //*** found_index=-1 
+                //     printf("found_index = %d\n", found_index);
+                //     found_flag = found_flag && 0;
+                //     printf("found_flag = %d\n", found_flag);
+                // }
+            } //*** After scanning all k
 
+            
+            //*** ABORT (==return)
             if ( found_index == -1 )
             {
-                fprintf( stderr,
-                        "Error: Unable to find a pixel in the color map\n" ) ;
-                return 0 ;
+                found_flag = found_flag && 0;
+            } else {/* Actual UPDATE */
+                image->g->SavedImages[i].RasterBits[j] = found_index ;
             }
-
-            image->g->SavedImages[i].RasterBits[j] = found_index ;
+        }
+        if (found_flag == 0)
+        {
+            fprintf( stderr,
+                    "Error: Unable to find a pixel in the color map\n" ) ;
+            return 0; //*** abort [Error: Unable to find a pixel in the color map]
         }
     }
 

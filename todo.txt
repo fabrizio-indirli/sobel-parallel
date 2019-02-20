@@ -9,3 +9,21 @@ output_modified_read_gif( filename, image->g )
     EGifSpew( g2 );
 
 
+
+
+/* [DEBUG] Sometime the image `tumblr_*` is exported but sometime is not */
+#pragma omp atomic
+                    n_colors++ ; 
+                //*** LOG
+                // printf("Rank : %d; n_colors : %d\n", omp_get_thread_num(), n_colors);
+            } //*** `n_colors` is atomically reduced. 
+        } //*** omp for ends. 
+        
+        //* Cannot use 'return' or 'break' in omp for
+        if (n_colors > 256) //*** equal removed due to the sequential relation with 'if ( fouund == 0 )'
+        {
+            fprintf( stderr,
+                    "Error: Found too many colors inside the image\n"
+                    ) ;
+            return 0;
+        }
