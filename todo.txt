@@ -27,3 +27,11 @@ output_modified_read_gif( filename, image->g )
                     ) ;
             return 0;
         }
+
+
+/* load_pixels */
+//***
+// #if NUM_THREADS > 1
+//     #pragma omp parallel 
+// #endif
+//*** again 'return' in for...

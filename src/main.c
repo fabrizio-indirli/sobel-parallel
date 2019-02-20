@@ -144,6 +144,11 @@ load_pixels( char * filename )
         return NULL ;
     }
 
+//***
+// #if NUM_THREADS > 1
+//     #pragma omp parallel 
+// #endif
+//*** again 'return' in for...
     for ( i = 0 ; i < n_images ; i++ )
     {
         p[i] = (pixel *)malloc( width[i] * height[i] * sizeof( pixel ) ) ; // sizeof(pixel)==12 rgb int
