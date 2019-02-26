@@ -3,7 +3,7 @@ HEADER_DIR=include
 OBJ_DIR=obj
 
 CC=gcc
-CFLAGS=-fopenmp -O3 -I$(HEADER_DIR) -Wall
+CFLAGS=-fopenmp -O3 -I$(HEADER_DIR) -Wall -fPIC
 #CFLAGS=-O3 -I$(HEADER_DIR)
 LDFLAGS=-lm
 
