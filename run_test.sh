@@ -13,5 +13,6 @@ for i in $INPUT_DIR/*gif ; do
     echo "Running test on $i -> $DEST"
 
     #./sobelf $i $DEST
-    salloc -n 2 ./sobelf $i $DEST
+    # salloc -n 2 ./sobelf $i $DEST
+    mpirun -np 1 ./sobelf $i $DEST
 done

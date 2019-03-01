@@ -21,13 +21,13 @@
 #include "datastr.h"
 
 #define SOBELF_DEBUG 0
-#define LOGGING 0
+#define LOGGING 1
 #define EXPORT 1
 #define MPI_DEBUG 1
 #define GDB_DEBUG 0
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/write_plog3.csv"
+    #define FILE_NAME "./logs_plots/plog_ser.csv"
     FILE *fOut;
 
     void writeNumToLog(double n){
@@ -58,14 +58,15 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs){
         width = ws[i];
         height = hs[i];
 
-        /* Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
+
+        /*Apply grey filter: convert the pixels into grayscale */
+        apply_gray_filter(width, height, pi);
 
         /*Apply blur filter with convergence value*/
         apply_blur_filter( width, height, pi, 5, 20 ) ;
 
-        /*Apply grey filter: convert the pixels into grayscale */
-        apply_gray_filter(width, height, pi);
+        /* Apply sobel filter on pixels */
+        apply_sobel_filter(width, height, pi);
 
     }
 }
@@ -123,7 +124,7 @@ int main( int argc, char ** argv )
     #if LOGGING
         fOut = fopen(FILE_NAME,"a");
         if(ftell(fOut)==0) //file is empty
-            fprintf(fOut, "import_time,filters_time,export_time,");
+            fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
         newRow();
     #endif
 
@@ -144,6 +145,9 @@ int main( int argc, char ** argv )
         printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
                 input_filename, image->n_images, duration ) ;
         #if LOGGING
+            appendNumToRow(image->n_images);
+            appendNumToRow(image->width[0]);
+            appendNumToRow(image->height[0]);
             appendNumToRow(duration);
         #endif
     }
@@ -160,7 +164,10 @@ int main( int argc, char ** argv )
     #define HEI(j) dims[(n_imgs_per_node)+(j)]
     #define N_PREV_IMGS(i) (n_imgs_init_node)+((i-1)*n_imgs_per_node)
 
-    MPI_Status comm_status;
+    #ifdef MPI_VERSION
+        MPI_Status comm_status;
+    #endif
+
     int num_imgs = 0;
 
     if(my_rank == 0){
@@ -233,16 +240,19 @@ int main( int argc, char ** argv )
         // node 0 computes filters on its images
         apply_all_filters(image->width, image->height, p, n_imgs_init_node);
 
-        // macros to extract images' sizes now that the dims vector is not available
-        #define W0(i,j) image->width[(N_PREV_IMGS(i))+(j)]
-        #define H0(i,j) image->height[(N_PREV_IMGS(i))+(j)]
+        #ifdef MPI_VERSION
+            // macros to extract images' sizes now that the dims vector is not available
+            #define W0(i,j) image->width[(N_PREV_IMGS(i))+(j)]
+            #define H0(i,j) image->height[(N_PREV_IMGS(i))+(j)]
 
-        // receive images from all the other nodes
-        for(i=1; i < num_nodes; i++){
-            for(j=0; j < n_imgs_per_node; j++){
-                MPI_Recv(p[N_PREV_IMGS(i) + j], W0(i,j)*H0(i,j), mpi_pixel_type, i,3, MPI_COMM_WORLD, &comm_status);
+            // receive images from all the other nodes
+            for(i=1; i < num_nodes; i++){
+                for(j=0; j < n_imgs_per_node; j++){
+                    MPI_Recv(p[N_PREV_IMGS(i) + j], W0(i,j)*H0(i,j), mpi_pixel_type, i,3, MPI_COMM_WORLD, &comm_status);
+                }
             }
-        }
+        #endif
+
 
     } else {
         // NODES WITH RANK >= 1
@@ -288,7 +298,10 @@ int main( int argc, char ** argv )
             #endif
     }
 
-    MPI_Finalize();
+    #ifdef MPI_VERSION
+        MPI_Finalize();
+    #endif
+
     if(my_rank > 0) return 0;
     /***** End of parallelized version of filters *****/
 
