@@ -101,14 +101,14 @@ int main( int argc, char ** argv )
         height = image->height[i] ;
         pixel * pi = p[i];
 
-        /* Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
+        /*Apply grey filter: convert the pixels into grayscale */
+        apply_gray_filter(width, height, pi);
 
         /*Apply blur filter with convergence value*/
         apply_blur_filter( width, height, pi, 5, 20 ) ;
 
-        /*Apply grey filter: convert the pixels into grayscale */
-        apply_gray_filter(width, height, pi);
+        /* Apply sobel filter on pixels */
+        apply_sobel_filter(width, height, pi);
 
     }
     /***** End of parallelized version of filters *****/
