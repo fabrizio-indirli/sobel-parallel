@@ -594,18 +594,21 @@ apply_gray_filter( animated_gif * image )
 
     int num_threads;
 
-    #pragma omp parallel default(none) shared(p,i,image,num_threads)
+    #pragma omp parallel default(none) shared(num_threads)
     {
-        int rank = omp_get_thread_num();
         #pragma omp master
         {
             num_threads = omp_get_num_threads();
             printf("The number of threads : %d\n", num_threads);
         }
-        
-        if (image->n_images < num_threads) {
-            for (i = 0 ; i < image->n_images; i++)
+    }
+    
+    if (image->n_images < num_threads) {
+        for (i = 0 ; i < image->n_images; i++)
+        {
+            #pragma omp parallel default(none) private(j) shared(i,p,image)
             {
+                int rank = omp_get_thread_num();
                 printf("(IF)Image[%d] from %d\n", i, rank);
                 #pragma omp for schedule(static)
                 for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
@@ -621,12 +624,16 @@ apply_gray_filter( animated_gif * image )
                     p[i][j].g = moy ;
                     p[i][j].b = moy ;
                 }
-            }
-        } else {
-            for (i = 0 ; i < image->n_images; i++)
+            } // END: #pragma omp parallel
+        }
+    } else {
+        #pragma omp parallel default(none) private(i,j) shared(p,image)
+        {
+            #pragma omp for schedule(static)
+            for (i = 0; i < image->n_images; i++)
             {
+                int rank = omp_get_thread_num();
                 printf("(ELSE)Image[%d] from %d\n", i, rank);
-                #pragma omp for schedule(static)
                 for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
                 {
                     int moy ;
@@ -641,10 +648,8 @@ apply_gray_filter( animated_gif * image )
                     p[i][j].b = moy ;
                 }
             }
-        }
-
+        } // END: #pragma omp parallel
     }
-
 }
 
 #define CONV(l,c,nb_c) \
