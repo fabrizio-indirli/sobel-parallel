@@ -690,122 +690,210 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
     /* Get the pixels of all images */
     p = image->p ;
 
+    int num_threads;
 
-    /* Process all images */
-    for ( i = 0 ; i < image->n_images ; i++ )
+    #pragma omp parallel default(none) shared(num_threads)
     {
-        n_iter = 0 ;
-        width = image->width[i] ;
-        height = image->height[i] ;
-
-        /* Allocate array of new pixels */
-        new = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
-
-        /* Perform at least one blur iteration */
-        do
+        #pragma omp master
         {
-            end = 1 ;
-            n_iter++ ;
-
-            /* Apply blur on top part of image (10%) */
-            for(j=size; j<height/10-size; j++)
-            {
-                for(k=size; k<width-size; k++)
-                {
-                    int stencil_j, stencil_k ;
-                    int t_r = 0 ;
-                    int t_g = 0 ;
-                    int t_b = 0 ;
-
-                    for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
-                    {
-                        for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
-                        {
-                            t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
-                            t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
-                            t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
-                        }
-                    }
-
-                    new[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-                    new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-                    new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
-                }
-            }
-
-            /* Copy the middle part of the image */
-            for(j=height/10-size; j<height*0.9+size; j++)
-            {
-                for(k=size; k<width-size; k++)
-                {
-                    new[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ; 
-                    new[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ; 
-                    new[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ; 
-                }
-            }
-
-            /* Apply blur on the bottom part of the image (10%) */
-            for(j=height*0.9+size; j<height-size; j++)
-            {
-                for(k=size; k<width-size; k++)
-                {
-                    int stencil_j, stencil_k ;
-                    int t_r = 0 ;
-                    int t_g = 0 ;
-                    int t_b = 0 ;
-
-                    for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
-                    {
-                        for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
-                        {
-                            t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
-                            t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
-                            t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
-                        }
-                    }
-
-                    new[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-                    new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-                    new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
-                }
-            }
-
-            for(j=1; j<height-1; j++)
-            {
-                for(k=1; k<width-1; k++)
-                {
-
-                    float diff_r ;
-                    float diff_g ;
-                    float diff_b ;
-
-                    diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
-                    diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
-                    diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
-
-                    if ( diff_r > threshold || -diff_r > threshold 
-                            ||
-                             diff_g > threshold || -diff_g > threshold
-                             ||
-                              diff_b > threshold || -diff_b > threshold
-                       ) {
-                        end = 0 ;
-                    }
-
-                    p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
-                    p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
-                    p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
-                }
-            }
-
+            num_threads = omp_get_num_threads();
+            printf("The number of threads : %d\n", num_threads);
         }
-        while ( threshold > 0 && !end ) ;
-
-        // printf( "Nb iter for image %d\n", n_iter ) ;
-
-        free (new) ;
     }
 
+    if (image->n_images < num_threads) {
+        /* Process all images */
+        for ( i = 0 ; i < image->n_images ; i++ )
+        {
+            n_iter = 0 ;
+            width = image->width[i] ;
+            height = image->height[i] ;
+
+            /* Allocate array of new pixels */
+            new = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
+
+            /* Perform at least one blur iteration */
+            do
+            {
+                end = 1 ;
+                n_iter++ ;
+
+                /* Apply blur on top part of image (10%) */
+                #pragma omp parallel default(none) private(j,k) shared(i,size,threshold,width,height,p,new,end) //***
+                {
+                    //*** one thing that if checks only j not k...
+                    //*** WHAT IF not using `collapse`?
+                    // #pragma omp for collapse(2) schedule(static,width) 
+                    #pragma omp for collapse(2) schedule(dynamic, width) 
+                    for(j=size; j<height-size;j++)
+                    {
+                        for(k=size; k<width-size; k++)
+                        {
+                            // int pixel = CONV(j,k,width); //*** can be useful...
+                            // Top and Bottom, 10% each
+                            if(j<height/10-size || j>height*0.9+size-1) // equivalent to (j>=height*0.9+size)
+                            {
+                                int stencil_j, stencil_k ;
+                                int t_r = 0 ;
+                                int t_g = 0 ;
+                                int t_b = 0 ;
+
+                                //*** Apply Blur
+                                for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+                                {
+                                    for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                                    {
+                                        t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
+                                        t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
+                                        t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
+                                    }
+                                }
+
+                                new[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ; // (size+1) * (size+1)
+                                new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+                                new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+
+                                //*** Now, check the threshold. 
+                                float diff_r ;
+                                float diff_g ;
+                                float diff_b ;
+
+                                diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+                                diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+                                diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+
+                                // if(j > height/10-size && j < j_cond)
+                                //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
+
+                                if ( diff_r > threshold || -diff_r > threshold
+                                        ||
+                                        diff_g > threshold || -diff_g > threshold
+                                        ||
+                                        diff_b > threshold || -diff_b > threshold
+                                ) {
+                                    end = 0 ; //*** FLAG (do while loop)
+                                }
+                                
+                                //*** update p
+                                p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                                p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                                p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
+
+                            } 
+                            // Middle part
+                            else 
+                            {
+                                new[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ;
+                                new[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ;
+                                new[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ;
+                            }
+                            
+                        }
+                    }
+                } // #pragma omp parallel end
+            } while ( threshold > 0 && !end ) ;
+
+            // printf( "Nb iter for image %d\n", n_iter ) ;int i=0; i<N; i++)
+
+            free (new) ;
+        }
+    } else {
+        /* Process all images */
+        #pragma omp parallel default(none) private(i,j,k,width,height,new,n_iter,end) shared(p,size,image,threshold)
+        {
+            #pragma omp for schedule(static)
+            for ( i = 0 ; i < image->n_images ; i++ )
+            {
+                int rank = omp_get_thread_num();
+                printf("(BLUR-ELSE)Image[%d] from %d\n", i, rank);
+
+                n_iter = 0 ;
+                width = image->width[i] ;
+                height = image->height[i] ;
+
+                /* Allocate array of new pixels */
+                new = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
+
+                /* Perform at least one blur iteration */
+                do
+                {
+                    end = 1 ;
+                    n_iter++ ;
+
+                    /* Apply blur on top part of image (10%) */
+                    for(j=size; j<height-size;j++)
+                    {
+                        for(k=size; k<width-size; k++)
+                        {
+                            // int pixel = CONV(j,k,width); //*** can be useful...
+                            // Top and Bottom, 10% each
+                            if(j<height/10-size || j>height*0.9+size-1) // equivalent to (j>=height*0.9+size)
+                            {
+                                int stencil_j, stencil_k ;
+                                int t_r = 0 ;
+                                int t_g = 0 ;
+                                int t_b = 0 ;
+
+                                //*** Apply Blur
+                                for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+                                {
+                                    for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                                    {
+                                        t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
+                                        t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
+                                        t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
+                                    }
+                                }
+
+                                new[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ; // (size+1) * (size+1)
+                                new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+                                new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+
+                                //*** Now, check the threshold. 
+                                float diff_r ;
+                                float diff_g ;
+                                float diff_b ;
+
+                                diff_r = (new[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+                                diff_g = (new[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+                                diff_b = (new[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+
+                                // if(j > height/10-size && j < j_cond)
+                                //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
+
+                                if ( diff_r > threshold || -diff_r > threshold
+                                        ||
+                                        diff_g > threshold || -diff_g > threshold
+                                        ||
+                                        diff_b > threshold || -diff_b > threshold
+                                ) {
+                                    end = 0 ; //*** FLAG (do while loop)
+                                }
+                                
+                                //*** update p
+                                p[i][CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                                p[i][CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                                p[i][CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
+
+                            } 
+                            // Middle part
+                            else 
+                            {
+                                new[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ;
+                                new[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ;
+                                new[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ;
+                            }
+                            
+                        }
+                    }
+                } while ( threshold > 0 && !end ) ;
+
+                // printf( "Nb iter for image %d\n", n_iter ) ;int i=0; i<N; i++)
+
+                free (new) ;
+            }
+        } // END: #pragma parallel
+    }
 }
 
 void
