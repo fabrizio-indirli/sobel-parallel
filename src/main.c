@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
+#include <omp.h>
 
 #include <gif_lib.h>
 
@@ -591,20 +592,32 @@ apply_gray_filter( animated_gif * image )
 
     p = image->p ;
 
+    int num_threads;
     for ( i = 0 ; i < image->n_images ; i++ )
     {
-        for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
+        #pragma omp parallel default(none) shared(i,image,num_threads,p)
         {
-            int moy ;
+            int rank = omp_get_thread_num();
+            #pragma omp master
+            {
+                num_threads = omp_get_num_threads();
+                printf("The number of threads : %d\n", num_threads);
+            }
 
-            // moy = p[i][j].r/4 + ( p[i][j].g * 3/4 ) ;
-            moy = (p[i][j].r + p[i][j].g + p[i][j].b)/3 ;
-            if ( moy < 0 ) moy = 0 ;
-            if ( moy > 255 ) moy = 255 ;
+            #pragma omp for schedule(static)
+            for ( j = 0 ; j < image->width[i] * image->height[i] ; j++ )
+            {
+                int moy ;
 
-            p[i][j].r = moy ;
-            p[i][j].g = moy ;
-            p[i][j].b = moy ;
+                // moy = p[i][j].r/4 + ( p[i][j].g * 3/4 ) ;
+                moy = (p[i][j].r + p[i][j].g + p[i][j].b)/3 ;
+                if ( moy < 0 ) moy = 0 ;
+                if ( moy > 255 ) moy = 255 ;
+
+                p[i][j].r = moy ;
+                p[i][j].g = moy ;
+                p[i][j].b = moy ;
+            }
         }
     }
 }
