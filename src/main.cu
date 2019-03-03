@@ -596,7 +596,7 @@ __global__ void compute_gray_filter( pixel* pi, int N )
         pi[j].g = moy;
         pi[j].b = moy;
     }
-}
+} 
 
 
 void
@@ -612,8 +612,6 @@ apply_gray_filter( animated_gif * image )
         int N = image->width[i] * image->height[i];
 
         /* GPU */
-        // dP[i] = dpi
-        // 
         pixel* dPi;
         cudaMalloc((void**)&dPi, N * sizeof(pixel));
 
@@ -650,6 +648,39 @@ void apply_gray_line( animated_gif * image )
     }
 }
 
+__global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int width, int size)
+{
+    int nHeight = height/10-size;
+    int nWidth = width-size;
+
+    int j, k;
+    for(j=size; j < nHeight; j++)
+    {
+        for(k=size; k < nWidth; k++)
+        {
+            int stencil_j, stencil_k ;
+            int t_r = 0 ;
+            int t_g = 0 ;
+            int t_b = 0 ;
+
+            for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+            {
+                for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                {
+                    t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+                    t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+                    t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+                }
+            }
+
+            newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+            newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+            newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+        }
+    }
+}
+
+
 void
 apply_blur_filter( animated_gif * image, int size, int threshold )
 {
@@ -672,14 +703,31 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         width = image->width[i] ;
         height = image->height[i] ;
 
+        int N = width * height;
+
         /* Allocate array of new pixels */
-        newP = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
+        newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
+
+        /* GPU */
+        pixel* dPi;
+        pixel* dNewP;
+
+        cudaMalloc((void**)&dPi, N * sizeof( pixel ));
+        cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
+
+        cudaMemcpy(dNewP, dPi, p[i], width * height * sizeof( pixel ));
+
 
         /* Perform at least one blur iteration */
         do
         {
             end = 1 ;
             n_iter++ ;
+
+            compute_blur_filter<<<1,256>>>(dPi, height, width, size);
+
+            cudaMemcpy(newP, )
+
 
             /* Apply blur on top part of image (10%) */
             for(j=size; j<height/10-size; j++)
@@ -744,6 +792,16 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
                 }
             }
 
+
+
+
+
+
+
+
+
+
+            
             for(j=1; j<height-1; j++)
             {
                 for(k=1; k<width-1; k++)
