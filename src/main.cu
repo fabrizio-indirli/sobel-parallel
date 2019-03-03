@@ -679,6 +679,33 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
             newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
         }
     }
+
+    /* Apply blur on the bottom part of the image (10%) */
+    for(j=height*0.9+size; j<height-size; j++)
+    {
+        for(k=size; k<width-size; k++)
+        {
+            int stencil_j, stencil_k ;
+            int t_r = 0 ;
+            int t_g = 0 ;
+            int t_b = 0 ;
+
+            for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+            {
+                for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                {
+                    t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+                    t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+                    t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+                }
+            }
+
+            newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+            newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+            newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+        }
+    }
+    
 }
 
 
@@ -769,31 +796,31 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
                 }
             }
 
-            /* Apply blur on the bottom part of the image (10%) */
-            for(j=height*0.9+size; j<height-size; j++)
-            {
-                for(k=size; k<width-size; k++)
-                {
-                    int stencil_j, stencil_k ;
-                    int t_r = 0 ;
-                    int t_g = 0 ;
-                    int t_b = 0 ;
+            // /* Apply blur on the bottom part of the image (10%) */
+            // for(j=height*0.9+size; j<height-size; j++)
+            // {
+            //     for(k=size; k<width-size; k++)
+            //     {
+            //         int stencil_j, stencil_k ;
+            //         int t_r = 0 ;
+            //         int t_g = 0 ;
+            //         int t_b = 0 ;
 
-                    for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
-                    {
-                        for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
-                        {
-                            t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
-                            t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
-                            t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
-                        }
-                    }
+            //         for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+            //         {
+            //             for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+            //             {
+            //                 t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
+            //                 t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
+            //                 t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
+            //             }
+            //         }
 
-                    newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-                    newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-                    newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
-                }
-            }
+            //         newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+            //         newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+            //         newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+            //     }
+            // }
 
 
 
