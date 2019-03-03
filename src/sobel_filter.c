@@ -63,12 +63,12 @@ void apply_sobel_filter(int width, int height, pixel * pi){
             {
                 for(k=1; k<width-1; k++)
                 {
-                    p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
-                    p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
-                    p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+                    pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+                    pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+                    pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
                 }
             }
         }
     } // #pragma omp parallel ends
-    free (sobel) ;
+    free(sobel) ;
 }
