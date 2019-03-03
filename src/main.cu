@@ -583,7 +583,7 @@ store_pixels( char * filename, animated_gif * image )
     return 1 ;
 }
 
-__global__ void compute_gray_filter( int* gray, pixel* pi, int N )
+__global__ void compute_gray_filter( pixel* pi, int N )
 {
     int moy;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
@@ -592,14 +592,17 @@ __global__ void compute_gray_filter( int* gray, pixel* pi, int N )
         moy = (pi[j].r + pi[j].g + pi[j].b)/3 ;
         if ( moy < 0 ) moy = 0 ;
         if ( moy > 255 ) moy = 255 ;
-        gray[j] = moy;
+        pi[j].r = moy;
+        pi[j].g = moy;
+        pi[j].b = moy;
     }
 }
+
 
 void
 apply_gray_filter( animated_gif * image )
 {
-    int i, j ;
+    int i;
     pixel ** p ;
 
     p = image->p ; 
@@ -607,30 +610,19 @@ apply_gray_filter( animated_gif * image )
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         int N = image->width[i] * image->height[i];
-        
-        /* CPU */
-        int* gray;
-        gray = (int*)malloc( N * sizeof(int) ); // Output (CPU)
 
         /* GPU */
+        // dP[i] = dpi
+        // 
         pixel* dPi;
-        int* dGray; // Output 
-
         cudaMalloc((void**)&dPi, N * sizeof(pixel));
-        cudaMalloc((void**)&dGray, N * sizeof(int));
 
         cudaMemcpy(dPi, p[i], N * sizeof(pixel), cudaMemcpyHostToDevice);
 
-        compute_gray_filter<<<1,256>>>(dGray, dPi, N);
+        compute_gray_filter<<<1,256>>>(p[i], N);
 
-        cudaMemcpy(gray, dGray, N * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(p[i], dPi, N * sizeof(pixel), cudaMemcpyDeviceToHost);
 
-        for (j = 0; j < N; j++ )
-        {
-            p[i][j].r = gray[j] ;
-            p[i][j].g = gray[j] ;
-            p[i][j].b = gray[j] ;
-        }
     }
 }
 
