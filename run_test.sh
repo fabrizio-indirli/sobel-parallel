@@ -14,3 +14,5 @@ for i in $INPUT_DIR/*gif ; do
 
     ./sobelf $i $DEST
 done
+
+echo "----------------------------------------------------------------------" >> test_result.txt
