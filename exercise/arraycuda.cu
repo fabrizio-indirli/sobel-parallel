@@ -53,6 +53,22 @@ int main()
     compute_addition<<<1,256>>>(dC, dA, dB, N);
 
     cudaMemcpy(A, dC, N * sizeof(int), cudaMemcpyDeviceToHost);
+    /// A[] = {7,7,7}
+
+    int i;
+    for (i=0; i < 6; ++i)
+    {
+        printf("%d\n", A[i]);
+    }
+
+    int j;
+    for (j=0; j < 3; ++j)
+    {
+        cudaMemcpy(dA, A, N * sizeof(int), cudaMemcpyHostToDevice);
+        compute_addition<<<1,256>>>(dC, dA, dB, N);
+        cudaMemcpy(A, dC, N * sizeof(int), cudaMemcpyDeviceToHost);
+    }
+    
 
     // /* GPU */
     // pixel* dGrayi;
@@ -79,7 +95,6 @@ int main()
     // compute_gray_filter<<<1,256>>>(dGray, dPi, N);
 
     // cudaMemcpy(gray, dGray, N * sizeof(int), cudaMemcpyDeviceToHost);
-    int i;
     for (i=0; i < 6; ++i)
     {
         printf("%d\n", A[i]);

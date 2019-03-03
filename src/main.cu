@@ -654,6 +654,7 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
     int nWidth = width-size;
 
     int j, k;
+    /* Apply blur on top part of image (10%) */
     for(j=size; j < nHeight; j++)
     {
         for(k=size; k < nWidth; k++)
@@ -715,7 +716,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         cudaMalloc((void**)&dPi, N * sizeof( pixel ));
         cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
 
-        cudaMemcpy(dNewP, dPi, p[i], width * height * sizeof( pixel ));
+        
 
 
         /* Perform at least one blur iteration */
@@ -724,36 +725,38 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             end = 1 ;
             n_iter++ ;
 
-            compute_blur_filter<<<1,256>>>(dPi, height, width, size);
+            cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
 
-            cudaMemcpy(newP, )
+            compute_blur_filter<<<1,256>>>(dNewP, dPi, height, width, size);
+
+            cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
 
 
-            /* Apply blur on top part of image (10%) */
-            for(j=size; j<height/10-size; j++)
-            {
-                for(k=size; k<width-size; k++)
-                {
-                    int stencil_j, stencil_k ;
-                    int t_r = 0 ;
-                    int t_g = 0 ;
-                    int t_b = 0 ;
+            // /* Apply blur on top part of image (10%) */
+            // for(j=size; j<height/10-size; j++)
+            // {
+            //     for(k=size; k<width-size; k++)
+            //     {
+            //         int stencil_j, stencil_k ;
+            //         int t_r = 0 ;
+            //         int t_g = 0 ;
+            //         int t_b = 0 ;
 
-                    for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
-                    {
-                        for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
-                        {
-                            t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
-                            t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
-                            t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
-                        }
-                    }
+            //         for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+            //         {
+            //             for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+            //             {
+            //                 t_r += p[i][CONV(j+stencil_j,k+stencil_k,width)].r ;
+            //                 t_g += p[i][CONV(j+stencil_j,k+stencil_k,width)].g ;
+            //                 t_b += p[i][CONV(j+stencil_j,k+stencil_k,width)].b ;
+            //             }
+            //         }
 
-                    newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-                    newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-                    newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
-                }
-            }
+            //         newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+            //         newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+            //         newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+            //     }
+            // }
 
             /* Copy the middle part of the image */
             for(j=height/10-size; j<height*0.9+size; j++)
