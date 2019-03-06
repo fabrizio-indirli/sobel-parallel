@@ -587,8 +587,9 @@ __global__ void compute_gray_filter( pixel* pi, int N )
 {
     int moy;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
-    for ( j=0; j < N; ++j )
-    {
+    // for ( j=0; j < N; ++j )
+    // {
+    if(j < N){
         moy = (pi[j].r + pi[j].g + pi[j].b)/3 ;
         if ( moy < 0 ) moy = 0 ;
         if ( moy > 255 ) moy = 255 ;
@@ -596,6 +597,7 @@ __global__ void compute_gray_filter( pixel* pi, int N )
         pi[j].g = moy;
         pi[j].b = moy;
     }
+    // }
 } 
 
 
@@ -617,7 +619,14 @@ apply_gray_filter( animated_gif * image )
 
         cudaMemcpy(dPi, p[i], N * sizeof(pixel), cudaMemcpyHostToDevice);
 
-        compute_gray_filter<<<1,256>>>(p[i], N);
+        // int numBlocks = 1;
+        dim3 threadsPerBlock(512); // blockDim.x, blockDim.y, blockDim.z
+        dim3 numBlocks(N / threadsPerBlock.x);
+        printf("threadsPerBlock (%d,%d,%d)\n", threadsPerBlock.x, threadsPerBlock.y, threadsPerBlock.z);
+        printf("numBlocks (%d,%d,%d)\n", numBlocks.x, numBlocks.y, numBlocks.z);
+        printf("numBlocks (%d,%d,%d)\n", numBlocks.x, numBlocks.y, numBlocks.z);
+
+        compute_gray_filter<<<numBlocks,threadsPerBlock>>>(p[i], N);
 
         cudaMemcpy(p[i], dPi, N * sizeof(pixel), cudaMemcpyDeviceToHost);
 
@@ -1009,7 +1018,7 @@ int main( int argc, char ** argv )
 
     /* Apply blur filter with convergence value */
     gettimeofday(&t1, NULL);
-    apply_blur_filter( image, 5, 20 ) ;
+    // apply_blur_filter( image, 5, 20 ) ;
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "BLUR FILTER done in %lf s\n", duration ) ;
