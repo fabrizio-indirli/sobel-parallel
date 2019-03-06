@@ -19,9 +19,10 @@
 #include "sobel_filter.h"
 
 #define SOBELF_DEBUG 1
-#define LOGGING 1
+#define LOGGING 0
 #define EXPORT 1
 #define MPI_DEBUG 1
+#define GDB_DEBUG 0
 
 #if LOGGING
     #define FILE_NAME "./logs_plots/write_plog3.csv"
@@ -42,6 +43,7 @@
 #endif
 
 int num_nodes, my_rank;
+int numSent2Next = 0;
 
 #define N_NODES_x_FILTER (num_nodes/3)
 
@@ -57,23 +59,28 @@ int cumulativeSum(int * vect, int num){
 #define WID(i) dims[i]
 #define HEI(i) dims[num_imgs_this_node + i]
 
-void send2next(int num_imgs_this_node, pixel ** p, int * dims, MPI_Datatype mpi_pixel_type){
-    printf("\nI AM HERE %d", num_nodes);
+void send2next(int num_imgs_this_node, pixel * p, int * dims, MPI_Datatype mpi_pixel_type, int j){
 
     int dest = my_rank + N_NODES_x_FILTER;
 
-    //send number of images
-    MPI_Send(&num_imgs_this_node, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+    // if it's the first message to the next node in the pipeline,
+    // we need to tell him the number of images and the dimensions
 
-    // send a vector whose first half contains the widths and whose last half contains the heights
-    MPI_Send(dims, 2*num_imgs_this_node, MPI_INT, dest, 1, MPI_COMM_WORLD);
+    if(numSent2Next == 0){
+        //send number of images
+        MPI_Send(&num_imgs_this_node, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+        printf("Rank %d has sent num_of_imgs to rank %d\n", my_rank, dest);
 
-    // send pictures to next node in the pipeline
-    int j;
-    for(j=0; j<num_imgs_this_node; j++){
-        MPI_Send(p[j], WID(j)*HEI(j), mpi_pixel_type, dest, 2, MPI_COMM_WORLD);
+        // send a vector whose first half contains the widths and whose last half contains the heights
+        MPI_Send(dims, 2*num_imgs_this_node, MPI_INT, dest, 1, MPI_COMM_WORLD);
+        printf("Rank %d has sent dimensions to rank %d\n", my_rank, dest);
     }
-    printf("Rank %d has sent %d pictures to rank %d\n", my_rank, num_imgs_this_node, dest);
+    numSent2Next++;
+
+    // send pictures to next node in the pipeline    
+    MPI_Send(p, WID(j)*HEI(j), mpi_pixel_type, dest, 2, MPI_COMM_WORLD);
+    
+    printf("Rank %d has sent picture %d of %d to rank %d\n", my_rank, j,num_imgs_this_node, dest);
 
 
 }
@@ -103,6 +110,27 @@ void apply_filter(int * ws, int * hs, pixel ** p, int num_subimgs){
 
 }
 
+void apply_filter2(int width, int height, pixel * pi){
+    printf("Rank %d is app filter on image\n", my_rank);
+
+    /*1st group of nodes apply grey filter: convert the pixels into grayscale */
+    if(my_rank < N_NODES_x_FILTER) apply_gray_filter(width, height, pi);
+
+    /*2nd group of nodes apply blur filter with convergence value*/
+    if(my_rank >= N_NODES_x_FILTER && my_rank < 2*N_NODES_x_FILTER)
+        apply_blur_filter( width, height, pi, 5, 20 ) ;
+    
+    /* 3rd group apply sobel filter on pixels */
+    if(my_rank >= 2*N_NODES_x_FILTER) apply_sobel_filter(width, height, pi);
+}
+
+void printVector(int * v, int n){
+    int j;
+    printf("Vector is: ");
+    for(j=0; j < n; j++) printf(" %d ", v[j]);
+    printf("\n");
+}
+
 int main( int argc, char ** argv )
 {
 
@@ -123,11 +151,13 @@ int main( int argc, char ** argv )
         MPI_Init(&argc, &argv);
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+        printf("Rank %d has pid %d\n", my_rank, getpid());
     
         #if GDB_DEBUG
-            if(my_rank==0) {
+            if(my_rank==0 || my_rank == 1) {
                 // hangs program: used only for debug purposes
-                int plop=1;
+                int plop=0;
                 printf("my pid=%d\n", getpid());
                 while(plop==0) ;
             }
@@ -145,6 +175,7 @@ int main( int argc, char ** argv )
         MPI_Type_create_struct(N_ITEMS_PIXEL, blocklengths, offsets, types, &mpi_pixel_type);
         MPI_Type_commit(&mpi_pixel_type);
 
+
     #else
         num_nodes = 1;
         my_rank = 0;
@@ -158,6 +189,7 @@ int main( int argc, char ** argv )
             fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
         newRow();
     #endif
+
 
     if(my_rank == 0){
         // Only initial process loads the file
@@ -183,6 +215,8 @@ int main( int argc, char ** argv )
         #endif
     }
 
+
+    
     /* FILTER Timer start */
     gettimeofday(&t0, NULL);
 
@@ -203,7 +237,7 @@ int main( int argc, char ** argv )
 
         // compute num of imgs to send to each node
         int n_imgs_x_node[N_NODES_x_FILTER];
-        int rest = num_imgs/N_NODES_x_FILTER;
+        int rest = num_imgs % N_NODES_x_FILTER;
 
         for(j=0; j < N_NODES_x_FILTER; j++){
             
@@ -211,23 +245,24 @@ int main( int argc, char ** argv )
             rest--;
         }
 
+        printVector(n_imgs_x_node, N_NODES_x_FILTER);
+
         if(num_nodes > 2){
             #define N_IMGS_NODE(i) (n_imgs_x_node[i % 3])
+            printf("Found more than 2 nodes\n");
 
             int num_imgs_this_node;
-
-            //rank 0 sents to other nodes the number of images they have to compute
+            
+            //rank 0 sents to other nodes of group 0 the number of images they have to compute
             for(i=1; i<N_NODES_x_FILTER; i++){
 
                 num_imgs_this_node = N_IMGS_NODE(i);
                 int dims[2*num_imgs_this_node]; //vector 'sizes to send'
 
-                printf("\nI AM HERE 1");
-
                 //send number of images
                 MPI_Send(&num_imgs_this_node, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
 
-                // buld dimensions vector
+                // build dimensions vector
                 for(j=0; j < num_imgs_this_node; j++){
                     dims[j] = image->width[cumulativeSum(n_imgs_x_node, i) + j];
                     dims[num_imgs_this_node + j] = image->height[cumulativeSum(n_imgs_x_node, i) + j];
@@ -250,13 +285,20 @@ int main( int argc, char ** argv )
 
             // node 0 applies its filter on its pictures and sends to next node
             int dims[2*N_IMGS_NODE(0)]; //vector 'sizes to send'
-            // buld dimensions vector
+            // build dimensions vector
             for(j=0; j < N_IMGS_NODE(0); j++){
                 dims[j] = image->width[j];
-                dims[num_imgs_this_node + j] = image->height[j]; }
-            apply_filter(image->width, image->height, p, N_IMGS_NODE(0));
-            printf("\nI AM HERE 2");
-            // send2next(N_IMGS_NODE(0), p, dims, mpi_pixel_type);
+                dims[N_IMGS_NODE(0) + j] = image->height[j];
+            }
+
+            for(j=0; j < N_IMGS_NODE(0); j++){
+                // apply filter and send to next node
+                apply_filter2(image->width[j], image->height[j], p[j]);
+                printf("Rank %d has applied filter on image %d\n", j);
+                send2next(N_IMGS_NODE(0), p[j], dims, mpi_pixel_type, j);
+                }
+            
+            printf("Rank %d is here, it has %d imgs", my_rank, N_IMGS_NODE(my_rank));
 
             // macros to extract images' sizes now that the dims vector is not available
             #define W0(i,j) image->width[(N_PREV_IMGS(i))+(j)]
@@ -265,22 +307,27 @@ int main( int argc, char ** argv )
             // node 0 receives from the group 3 nodes
             for(i = 2*N_NODES_x_FILTER; i<3*N_NODES_x_FILTER; i++){
                 for(j=0; j < N_IMGS_NODE(i); j++){
+                    printf("Reception loop, image %d from node %d", j, i);
                     MPI_Recv(p[N_PREV_IMGS(i) + j], W0(i,j)*H0(i,j), mpi_pixel_type, i,3, MPI_COMM_WORLD, &comm_status);
                 }
 
             }
 
-        }
+        } 
     } else {
         // nodes with rank >= 1
+        printf("Rank %d is ready to receive\n", my_rank);
         int num_imgs_this_node;
 
+        int sender = (my_rank < N_NODES_x_FILTER) ? 0 : (my_rank - N_NODES_x_FILTER);
+
         // nodes with rank >= 1 receive the number of images they have to process
-        MPI_Recv(&num_imgs_this_node, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &comm_status);
+        MPI_Recv(&num_imgs_this_node, 1, MPI_INT, sender, 0, MPI_COMM_WORLD, &comm_status);
+        printf("Node %d has received num_of_imgs\n", my_rank);
 
         // nodes with rank >= 1 receive the dimensions vector and the pixels matrix
         int dims[2 * num_imgs_this_node];
-        MPI_Recv(dims, 2 * num_imgs_this_node, MPI_INT, 0, 1, MPI_COMM_WORLD, &comm_status);
+        MPI_Recv(dims, 2 * num_imgs_this_node, MPI_INT, sender, 1, MPI_COMM_WORLD, &comm_status);
         int total_num_pixels = 0;
         for(j=0; j < num_imgs_this_node; j++){
             total_num_pixels += dims[j] * dims[num_imgs_this_node + j]; 
@@ -295,23 +342,18 @@ int main( int argc, char ** argv )
 
         //receive images to process
         for(i=0; i<num_imgs_this_node; i++){
-            MPI_Recv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, &comm_status);
-        }
+            MPI_Recv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, sender, 2, MPI_COMM_WORLD, &comm_status);
+            apply_filter2(WID(i), HEI(i), p_rec[i]);
 
-        // PROCESS IMAGES //
-        apply_filter(dims, &(dims[num_imgs_this_node]), p_rec, num_imgs_this_node);
-        
-        if(my_rank < 2*N_NODES_x_FILTER){
-            // if this node is in the 1st or 2nd group, send to next node in the pipeline
-            send2next(num_imgs_this_node, p_rec, dims, mpi_pixel_type);
-        }
-        else {
-            // if this node is in the 3rd group, send back to node 0
-            for(i=0; i<num_imgs_this_node; i++){
+            if(my_rank < 2*N_NODES_x_FILTER){
+                // if this node is in the 1st or 2nd group, send to next node in the pipeline
+                send2next(num_imgs_this_node, p_rec[i], dims, mpi_pixel_type, i);
+            } else {
+                // if this node is in the 3rd group, send back to node 0
                 MPI_Send((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 3, MPI_COMM_WORLD);
             }
         }
-
+        
     }
     /***** End of parallelized version of filters *****/
 
