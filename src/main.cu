@@ -653,7 +653,11 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
     int nHeight = height/10-size;
     int nWidth = width-size;
 
-    int j, k;
+    // int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = threadIdx.x;
+    int k = threadIdx.y;
+
+    // int j, k;
     /* Apply blur on top part of image (10%) */
     for(j=size; j < nHeight; j++)
     {
@@ -753,8 +757,10 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             n_iter++ ;
 
             cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
-
-            compute_blur_filter<<<1,256>>>(dNewP, dPi, height, width, size);
+            
+            int numBlocks = 1;
+            dim3 threadsPerBlock(1024, 1024);
+            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size);
 
             cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
 
@@ -1011,7 +1017,7 @@ int main( int argc, char ** argv )
 
     /* Apply sobel filter on pixels */
     gettimeofday(&t1, NULL);
-    apply_sobel_filter( image ) ;
+    // apply_sobel_filter( image ) ;
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "SOBEL FILTER done in %lf s\n", duration ) ;
