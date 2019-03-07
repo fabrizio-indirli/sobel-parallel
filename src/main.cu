@@ -621,9 +621,9 @@ apply_gray_filter( animated_gif * image )
 
         dim3 threadsPerBlock(1024); // blockDim.x, blockDim.y, blockDim.z
         dim3 numBlocks(N / threadsPerBlock.x + 1);
-        printf("threadsPerBlock (%d,%d,%d)\n", threadsPerBlock.x, threadsPerBlock.y, threadsPerBlock.z);
-        printf("numBlocks (%d,%d,%d)\n", numBlocks.x, numBlocks.y, numBlocks.z);
-        printf("numBlocks (%d,%d,%d)\n", numBlocks.x, numBlocks.y, numBlocks.z);
+        // printf("threadsPerBlock (%d,%d,%d)\n", threadsPerBlock.x, threadsPerBlock.y, threadsPerBlock.z);
+        // printf("numBlocks (%d,%d,%d)\n", numBlocks.x, numBlocks.y, numBlocks.z);
+        // printf("numBlocks (%d,%d,%d)\n", numBlocks.x, numBlocks.y, numBlocks.z);
 
         compute_gray_filter<<<numBlocks,threadsPerBlock>>>(dPi, N);
 
