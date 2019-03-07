@@ -721,6 +721,19 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
             newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
         }
     }
+
+    /* Copy the middle part of the image */
+    // for(j=height/10-size; j<height*0.9+size; j++)
+    if (j >= height/10-size && j < height*0.9+size)
+    {
+        // for(k=size; k<width-size; k++)
+        if (k >= size && k < width-size)
+        {
+            newP[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ; 
+            newP[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ; 
+            newP[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ; 
+        }
+    }
     
 }
 
@@ -800,16 +813,16 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             //     }
             // }
 
-            /* Copy the middle part of the image */
-            for(j=height/10-size; j<height*0.9+size; j++)
-            {
-                for(k=size; k<width-size; k++)
-                {
-                    newP[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ; 
-                    newP[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ; 
-                    newP[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ; 
-                }
-            }
+            // /* Copy the middle part of the image */
+            // for(j=height/10-size; j<height*0.9+size; j++)
+            // {
+            //     for(k=size; k<width-size; k++)
+            //     {
+            //         newP[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ; 
+            //         newP[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ; 
+            //         newP[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ; 
+            //     }
+            // }
 
             // /* Apply blur on the bottom part of the image (10%) */
             // for(j=height*0.9+size; j<height-size; j++)
