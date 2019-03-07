@@ -21,7 +21,7 @@
 #include "datastr.h"
 
 #define SOBELF_DEBUG 0
-#define LOGGING 1
+#define LOGGING 0
 #define EXPORT 1
 #define MPI_DEBUG 1
 #define GDB_DEBUG 0
