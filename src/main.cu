@@ -619,7 +619,6 @@ apply_gray_filter( animated_gif * image )
 
         cudaMemcpy(dPi, p[i], N * sizeof(pixel), cudaMemcpyHostToDevice);
 
-        // int numBlocks = 1;
         dim3 threadsPerBlock(1024); // blockDim.x, blockDim.y, blockDim.z
         dim3 numBlocks(N / threadsPerBlock.x + 1);
         printf("threadsPerBlock (%d,%d,%d)\n", threadsPerBlock.x, threadsPerBlock.y, threadsPerBlock.z);
@@ -663,14 +662,16 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
     int nWidth = width-size;
 
     // int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = threadIdx.x;
-    int k = threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int k = blockIdx.y * blockDim.y + threadIdx.y;
 
     // int j, k;
     /* Apply blur on top part of image (10%) */
-    for(j=size; j < nHeight; j++)
+    // for(j=size; j < nHeight; j++)
+    if(j >= size && j < nHeight)
     {
-        for(k=size; k < nWidth; k++)
+        // for(k=size; k < nWidth; k++)
+        if (k >= size && k < nWidth)
         {
             int stencil_j, stencil_k ;
             int t_r = 0 ;
@@ -693,31 +694,33 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
         }
     }
 
-    /* Apply blur on the bottom part of the image (10%) */
-    for(j=height*0.9+size; j<height-size; j++)
-    {
-        for(k=size; k<width-size; k++)
-        {
-            int stencil_j, stencil_k ;
-            int t_r = 0 ;
-            int t_g = 0 ;
-            int t_b = 0 ;
+    // /* Apply blur on the bottom part of the image (10%) */
+    // // for(j=height*0.9+size; j<height-size; j++)
+    // if(j>=height*0.9+size || j<height-size)
+    // {
+    //     if(k<nWidth)
+    //     // for(k=size; k<width-size; k++)
+    //     {
+    //         int stencil_j, stencil_k ;
+    //         int t_r = 0 ;
+    //         int t_g = 0 ;
+    //         int t_b = 0 ;
 
-            for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
-            {
-                for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
-                {
-                    t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
-                    t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
-                    t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
-                }
-            }
+    //         for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+    //         {
+    //             for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+    //             {
+    //                 t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+    //                 t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+    //                 t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+    //             }
+    //         }
 
-            newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-            newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-            newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
-        }
-    }
+    //         newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+    //         newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+    //         newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+    //     }
+    // }
     
 }
 
@@ -749,26 +752,24 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         /* Allocate array of new pixels */
         newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
 
-        /* GPU */
-        pixel* dPi;
-        pixel* dNewP;
-
-        cudaMalloc((void**)&dPi, N * sizeof( pixel ));
-        cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
-
-        
-
 
         /* Perform at least one blur iteration */
         do
         {
             end = 1 ;
             n_iter++ ;
+            
+            /* GPU */
+            pixel* dPi;
+            pixel* dNewP;
+
+            cudaMalloc((void**)&dPi, N * sizeof( pixel ));
+            cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
 
             cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
             
-            int numBlocks = 1;
-            dim3 threadsPerBlock(1024, 1024);
+            dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+            dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
             compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size);
 
             cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
@@ -1018,7 +1019,7 @@ int main( int argc, char ** argv )
 
     /* Apply blur filter with convergence value */
     gettimeofday(&t1, NULL);
-    // apply_blur_filter( image, 5, 20 ) ;
+    apply_blur_filter( image, 5, 20 ) ;
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "BLUR FILTER done in %lf s\n", duration ) ;
