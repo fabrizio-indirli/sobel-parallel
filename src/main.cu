@@ -661,7 +661,6 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
     int nHeight = height/10-size;
     int nWidth = width-size;
 
-    // int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int k = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -729,9 +728,9 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
         // for(k=size; k<width-size; k++)
         if (k >= size && k < width-size)
         {
-            newP[CONV(j,k,width)].r = p[i][CONV(j,k,width)].r ; 
-            newP[CONV(j,k,width)].g = p[i][CONV(j,k,width)].g ; 
-            newP[CONV(j,k,width)].b = p[i][CONV(j,k,width)].b ; 
+            newP[CONV(j,k,width)].r = pi[CONV(j,k,width)].r ; 
+            newP[CONV(j,k,width)].g = pi[CONV(j,k,width)].g ; 
+            newP[CONV(j,k,width)].b = pi[CONV(j,k,width)].b ; 
         }
     }
     
@@ -849,16 +848,6 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             //         newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
             //     }
             // }
-
-
-
-
-
-
-
-
-
-
             
             for(j=1; j<height-1; j++)
             {
@@ -898,10 +887,77 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
 
 }
 
+__global__ void compute_sobel_filter(pixel* sobel, pixel* pi, int height, int width)
+{
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int k = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // for(j=1; j<height-1; j++)
+    if(j >= 1 && j < height-1)
+    {
+        // for(k=1; k<width-1; k++)
+        if(k >= 1 && k < width-1)
+        {
+            int pixel_blue_no, pixel_blue_n, pixel_blue_ne;
+            int pixel_blue_so, pixel_blue_s, pixel_blue_se;
+            int pixel_blue_o , pixel_blue  , pixel_blue_e ;
+
+            float deltaX_blue ;
+            float deltaY_blue ;
+            float val_blue;
+
+            pixel_blue_no = pi[CONV(j-1,k-1,width)].b ;
+            pixel_blue_n  = pi[CONV(j-1,k  ,width)].b ;
+            pixel_blue_ne = pi[CONV(j-1,k+1,width)].b ;
+            pixel_blue_so = pi[CONV(j+1,k-1,width)].b ;
+            pixel_blue_s  = pi[CONV(j+1,k  ,width)].b ;
+            pixel_blue_se = pi[CONV(j+1,k+1,width)].b ;
+            pixel_blue_o  = pi[CONV(j  ,k-1,width)].b ;
+            pixel_blue    = pi[CONV(j  ,k  ,width)].b ;
+            pixel_blue_e  = pi[CONV(j  ,k+1,width)].b ;
+
+            deltaX_blue = -pixel_blue_no + pixel_blue_ne - 2*pixel_blue_o + 2*pixel_blue_e - pixel_blue_so + pixel_blue_se;             
+
+            deltaY_blue = pixel_blue_se + 2*pixel_blue_s + pixel_blue_so - pixel_blue_ne - 2*pixel_blue_n - pixel_blue_no;
+
+            val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
+
+
+            if ( val_blue > 50 ) 
+            {
+                sobel[CONV(j  ,k  ,width)].r = 255 ;
+                sobel[CONV(j  ,k  ,width)].g = 255 ;
+                sobel[CONV(j  ,k  ,width)].b = 255 ;
+            } else
+            {
+                sobel[CONV(j  ,k  ,width)].r = 0 ;
+                sobel[CONV(j  ,k  ,width)].g = 0 ;
+                sobel[CONV(j  ,k  ,width)].b = 0 ;
+            }
+        }
+    }
+
+    // // for(j=1; j<height-1; j++)
+    // if(j >= 1 && j < height-1)
+    // {
+    //     // for(k=1; k<width-1; k++)
+    //     if(k >= 1 && k < width-1)
+    //     {
+    //         pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+    //         pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+    //         pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+    //     }
+    // }
+
+    // free (sobel) ;
+
+}
+
 void
 apply_sobel_filter( animated_gif * image )
 {
     int i, j, k ;
+    // int i; Assigning inside CUDA
     int width, height ;
 
     pixel ** p ;
@@ -913,52 +969,73 @@ apply_sobel_filter( animated_gif * image )
         width = image->width[i] ;
         height = image->height[i] ;
 
+        int N = width*height;
+
         pixel * sobel ;
 
-        sobel = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
+        sobel = (pixel *)malloc(N * sizeof( pixel ) ) ; // new image
+        // malloc inside CUDA kernel?? possible? Not really used in CPU side...
 
-        for(j=1; j<height-1; j++)
-        {
-            for(k=1; k<width-1; k++)
-            {
-                int pixel_blue_no, pixel_blue_n, pixel_blue_ne;
-                int pixel_blue_so, pixel_blue_s, pixel_blue_se;
-                int pixel_blue_o , pixel_blue  , pixel_blue_e ;
+        /* GPU */
+        pixel* dPi;
+        pixel* dSobel;
 
-                float deltaX_blue ;
-                float deltaY_blue ;
-                float val_blue;
+        cudaMalloc((void**)&dPi, N * sizeof( pixel ));
+        cudaMalloc((void**)&dSobel, N * sizeof( pixel ));
+        // malloc inside CUDA kernel?? possible? Not really used in CPU side...
 
-                pixel_blue_no = p[i][CONV(j-1,k-1,width)].b ;
-                pixel_blue_n  = p[i][CONV(j-1,k  ,width)].b ;
-                pixel_blue_ne = p[i][CONV(j-1,k+1,width)].b ;
-                pixel_blue_so = p[i][CONV(j+1,k-1,width)].b ;
-                pixel_blue_s  = p[i][CONV(j+1,k  ,width)].b ;
-                pixel_blue_se = p[i][CONV(j+1,k+1,width)].b ;
-                pixel_blue_o  = p[i][CONV(j  ,k-1,width)].b ;
-                pixel_blue    = p[i][CONV(j  ,k  ,width)].b ;
-                pixel_blue_e  = p[i][CONV(j  ,k+1,width)].b ;
+        cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
 
-                deltaX_blue = -pixel_blue_no + pixel_blue_ne - 2*pixel_blue_o + 2*pixel_blue_e - pixel_blue_so + pixel_blue_se;             
+        dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+        dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+        compute_sobel_filter<<<numBlocks,threadsPerBlock>>>(dSobel, dPi, height, width);
 
-                deltaY_blue = pixel_blue_se + 2*pixel_blue_s + pixel_blue_so - pixel_blue_ne - 2*pixel_blue_n - pixel_blue_no;
+        // cudaMemcpy(sobel, dSobel, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+        cudaMemcpy(sobel, dSobel, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+        
 
-                val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
+        // for(j=1; j<height-1; j++)
+        // {
+        //     for(k=1; k<width-1; k++)
+        //     {
+        //         int pixel_blue_no, pixel_blue_n, pixel_blue_ne;
+        //         int pixel_blue_so, pixel_blue_s, pixel_blue_se;
+        //         int pixel_blue_o , pixel_blue  , pixel_blue_e ;
+
+        //         float deltaX_blue ;
+        //         float deltaY_blue ;
+        //         float val_blue;
+
+        //         pixel_blue_no = p[i][CONV(j-1,k-1,width)].b ;
+        //         pixel_blue_n  = p[i][CONV(j-1,k  ,width)].b ;
+        //         pixel_blue_ne = p[i][CONV(j-1,k+1,width)].b ;
+        //         pixel_blue_so = p[i][CONV(j+1,k-1,width)].b ;
+        //         pixel_blue_s  = p[i][CONV(j+1,k  ,width)].b ;
+        //         pixel_blue_se = p[i][CONV(j+1,k+1,width)].b ;
+        //         pixel_blue_o  = p[i][CONV(j  ,k-1,width)].b ;
+        //         pixel_blue    = p[i][CONV(j  ,k  ,width)].b ;
+        //         pixel_blue_e  = p[i][CONV(j  ,k+1,width)].b ;
+
+        //         deltaX_blue = -pixel_blue_no + pixel_blue_ne - 2*pixel_blue_o + 2*pixel_blue_e - pixel_blue_so + pixel_blue_se;             
+
+        //         deltaY_blue = pixel_blue_se + 2*pixel_blue_s + pixel_blue_so - pixel_blue_ne - 2*pixel_blue_n - pixel_blue_no;
+
+        //         val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
 
 
-                if ( val_blue > 50 ) 
-                {
-                    sobel[CONV(j  ,k  ,width)].r = 255 ;
-                    sobel[CONV(j  ,k  ,width)].g = 255 ;
-                    sobel[CONV(j  ,k  ,width)].b = 255 ;
-                } else
-                {
-                    sobel[CONV(j  ,k  ,width)].r = 0 ;
-                    sobel[CONV(j  ,k  ,width)].g = 0 ;
-                    sobel[CONV(j  ,k  ,width)].b = 0 ;
-                }
-            }
-        }
+        //         if ( val_blue > 50 ) 
+        //         {
+        //             sobel[CONV(j  ,k  ,width)].r = 255 ;
+        //             sobel[CONV(j  ,k  ,width)].g = 255 ;
+        //             sobel[CONV(j  ,k  ,width)].b = 255 ;
+        //         } else
+        //         {
+        //             sobel[CONV(j  ,k  ,width)].r = 0 ;
+        //             sobel[CONV(j  ,k  ,width)].g = 0 ;
+        //             sobel[CONV(j  ,k  ,width)].b = 0 ;
+        //         }
+        //     }
+        // }
 
         for(j=1; j<height-1; j++)
         {
@@ -1039,7 +1116,7 @@ int main( int argc, char ** argv )
 
     /* Apply sobel filter on pixels */
     gettimeofday(&t1, NULL);
-    // apply_sobel_filter( image ) ;
+    apply_sobel_filter( image ) ;
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "SOBEL FILTER done in %lf s\n", duration ) ;
