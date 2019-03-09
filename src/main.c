@@ -166,6 +166,12 @@ int main( int argc, char ** argv )
         int num_imgs = image->n_images;
         printf("\nThis GIF has %d sub-images\n", num_imgs);
 
+        
+        // send msg with sizes of all pictures
+        for(i=1; i<num_nodes; i++){
+            
+        }
+
 
     }
     
