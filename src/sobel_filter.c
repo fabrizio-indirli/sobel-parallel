@@ -4,19 +4,26 @@
     (l)*(nb_c)+(c)
 
 
-void apply_sobel_filter(int width, int height, pixel * pi){
+void apply_sobel_split(int width, int height, pixel * pi, int my_part, int num_parts){
     /*This version of the sobel filter works only on one image at a time*/
     int j, k;
     pixel * sobel ;
     sobel = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
 
-        #pragma omp parallel default(none) private(j,k) shared(width,height,pi,sobel) //***
-        {
-            // `dynamic` can be a better choice, since there is an if statement that might invoke imbalance for the iteration.
-            // Actually nope... static one is faster. 
-            #pragma omp for collapse(2) schedule(static) 
-            for(j=1; j<height-1; j++)
+         //***
+        {   
+            #define REST (height % num_parts)
+
+            int part_size = (my_part < REST) ? (height/num_parts + 1) : (height/num_parts);
+            int my_start_height =   (my_part < REST)
+                                    ? (my_part * (part_size))
+                                    : (my_part * part_size + REST);
+            if(my_start_height == 0) my_start_height++;
+            #define MY_END_HEIGHT ((my_part == (num_parts - 1)) ? (height - 1) : (my_start_height + part_size))
+            
+            for(j=my_start_height; j<MY_END_HEIGHT; j++)
             {
+                #pragma omp parallel for default(none) private(j,k) shared(width,height,pi,sobel)
                 for(k=1; k<width-1; k++)
                 {
                     int pixel_blue_no, pixel_blue_n, pixel_blue_ne;
