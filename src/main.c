@@ -161,6 +161,12 @@ int main( int argc, char ** argv )
 
     if(my_rank == 0){
         // work scheduling done by first node
+        pixel ** p ;
+        p = image->p ;
+        int num_imgs = image->n_images;
+        printf("\nThis GIF has %d sub-images\n", num_imgs);
+
+
     }
     
 
