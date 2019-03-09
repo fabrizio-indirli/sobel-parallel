@@ -71,4 +71,4 @@ void apply_sobel_filter(int width, int height, pixel * pi){
         }
         free(sobel) ;
     } // #pragma omp parallel ends
-    
+
