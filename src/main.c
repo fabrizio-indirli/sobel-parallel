@@ -51,9 +51,11 @@ int num_nodes, my_rank;
 #endif
 
 void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs, 
-                        MPI_Request * reqs, MPI_Datatype mpi_pixel_type){
+                        int start_img, MPI_Datatype mpi_pixel_type){
     int i, width, height;
-    for ( i = 0 ; i < num_subimgs ; i++ )
+    MPI_Request req;
+
+    for ( i = start_img ; i < start_img + num_subimgs ; i++ )
     {
         #if MPI_DEBUG
             printf("\nProcess %d is applying filters on image %d of %d\n",
@@ -62,8 +64,6 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs,
         pixel * pi = p[i];
         width = ws[i];
         height = hs[i];
-
-        MPI_Wait(&reqs[i], MPI_STATUS_IGNORE);
 
         /*Apply grey filter: convert the pixels into grayscale */
         apply_gray_filter(width, height, pi);
@@ -75,35 +75,12 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs,
         apply_sobel_filter(width, height, pi);
 
         /* Send back to rank 0 */
-        MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &(reqs[i]));
+        if(my_rank != 0)
+            MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &req);
 
     }
 }
 
-void apply_all_filters0(int * ws, int * hs, pixel ** p, int num_subimgs){
-    int i, width, height;
-    for ( i = 0 ; i < num_subimgs ; i++ )
-    {
-        #if MPI_DEBUG
-            printf("\nProcess %d is applying filters on image %d of %d\n",
-            my_rank, i, num_subimgs);
-        #endif
-        pixel * pi = p[i];
-        width = ws[i];
-        height = hs[i];
-
-
-        /*Apply grey filter: convert the pixels into grayscale */
-        apply_gray_filter(width, height, pi);
-
-        /*Apply blur filter with convergence value*/
-        apply_blur_filter( width, height, pi, 5, 20 ) ;
-
-        /* Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
-
-    }
-}
 
 
 void printVector(int * v, int n){
@@ -171,30 +148,37 @@ int main( int argc, char ** argv )
         newRow();
     #endif
 
-    if(my_rank == 0){
-        // Only initial process loads the file
 
-        input_filename = argv[1] ;
-        output_filename = argv[2] ;
-        gettimeofday(&t1, NULL); /* IMPORT Timer start */
+    // Only initial process loads the file
 
-        /* Load file and store the pixels in array */
-        image = load_pixels( input_filename ) ;
-        if ( image == NULL ) { return 1 ; }
+    input_filename = argv[1] ;
+    output_filename = argv[2] ;
+    gettimeofday(&t1, NULL); /* IMPORT Timer start */
 
-        gettimeofday(&t2, NULL); /* IMPORT Timer stop */
+    /* Load file and store the pixels in array */
+    image = load_pixels( input_filename ) ;
+    if ( image == NULL ) { return 1 ; }
 
-        duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
-        printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
-                input_filename, image->n_images, duration ) ;
-        #if LOGGING
-            appendNumToRow(image->n_images);
-            appendNumToRow(image->width[0]);
-            appendNumToRow(image->height[0]);
-            appendNumToRow(duration);
-        #endif
-    }
+    gettimeofday(&t2, NULL); /* IMPORT Timer stop */
 
+    duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+    printf( "Rank %d has loaded from file %s with %d image(s) in %lf s\n", 
+            my_rank, input_filename, image->n_images, duration ) ;
+    #if LOGGING
+        appendNumToRow(image->n_images);
+        appendNumToRow(image->width[0]);
+        appendNumToRow(image->height[0]);
+        appendNumToRow(duration);
+    #endif
+    
+    #if GDB_DEBUG
+        if(my_rank==1) {
+            // hangs program: used only for debug purposes
+            int plop=0;
+            printf(" pid of rank %d is %d\n", my_rank, getpid());
+            while(plop==0) ;
+        }
+    #endif
     
     /* FILTER Timer start */
     gettimeofday(&t0, NULL);
@@ -203,154 +187,54 @@ int main( int argc, char ** argv )
     int i, j;
     int n_imgs_this_node;
 
-    #define WID(j) dims[j]
-    #define HEI(j) dims[n_imgs_this_node + j]
+    #define WID(j) image->width[j]
+    #define HEI(j) image->height[j]
 
 
-    int num_imgs = 0;
+    int num_imgs = image->n_images;
+    pixel ** p ;
+    p = image->p ;
+
+    #define REST (num_imgs % num_nodes)
+    #define PART (num_imgs / num_nodes)
+    #define N_IMGS_NODE(i) ((num_nodes > num_imgs) ? ((i < num_imgs) ? 1 : 0) : ((i < REST) ? (PART + 1) : (PART)))
+
+    n_imgs_this_node = N_IMGS_NODE(my_rank);
+    int start_img = (my_rank < REST) ? (my_rank * (PART + 1)) : (my_rank * PART + REST);
+
+    printf("\nRank %d is HERE", my_rank);
+    //printf("\nRank %d has to compute picture from %d to %d", my_rank, start_img, start_img + n_imgs_this_node);
+    
+
+    //apply filters on my pictures
+    apply_all_filters(image->width, image->height, p, n_imgs_this_node, start_img, mpi_pixel_type);
 
     if(my_rank == 0){
         // work scheduling done by first node
-        pixel ** p ;
-        p = image->p ;
-        num_imgs = image->n_images;
         printf("\nThis GIF has %d sub-images\n", num_imgs);
 
-        int n_imgs_per_node[num_nodes];
-
-        int i;
-        // compute num of imgs that each node has to process
-        if(num_nodes > num_imgs){
-            // if there are more ranks than images, each rank processes 1 image
-            printf("Too many nodes: %d of them won't be used", (num_nodes - num_imgs));
-            for(i = 0; i < num_nodes; i++){
-                if(i < num_imgs) n_imgs_per_node[i] = 1;
-                else n_imgs_per_node[i] = 0;
-            }
-        } else {
-            // otherwise, each rank processes (num_imgs / num_nodes) images.
-            // if ther's a rest to this division, it's added to the number of
-            // images processed by the first ranks.
-            #define NPN (num_imgs/num_nodes) //integer division
-            int rest = num_imgs % num_nodes;
-            for(i = 0; i < num_nodes; i++){
-                if(rest>0) {n_imgs_per_node[i] = NPN + 1; rest--;}
-                else n_imgs_per_node[i] = NPN;
-            }
-        }
-
-
-        #if MPI_DEBUG
-            printf("\nThe %d ranks will process the following number of sub-imgs each: ", num_nodes);
-            printVector(n_imgs_per_node, num_nodes);
-        #endif
-        
-        int n_prev_imgs = n_imgs_per_node[0];
-
-        #define W0 image->width[n_prev_imgs]
-        #define H0 image->height[n_prev_imgs]
-
-        for(i=1; i<num_nodes; i++){
-            #ifdef MPI_VERSION
-                
-                    int dims[2*n_imgs_per_node[i]]; //vector 'sizes to send'
-                    
-                    //send number of images
-                    MPI_Send(&(n_imgs_per_node[i]), 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-
-                    // send dimensions to other processes
-                    for(j=0; j < n_imgs_per_node[i]; j++){
-                        dims[j] = image->width[n_prev_imgs + j];
-                        dims[n_imgs_per_node[i] + j] = image->height[n_prev_imgs + j];
-                    }
-                    // send a vector whose first half contains the widths and whose last half contains the heights
-                    MPI_Send(dims, 2*n_imgs_per_node[i], MPI_INT, i, 1, MPI_COMM_WORLD);
-
-                    //requests vector
-                    MPI_Request reqs[n_imgs_this_node];
-
-                    //send pixels to other processes
-                    for(j=0; j < n_imgs_per_node[i]; j++){ 
-                        MPI_Isend(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD, &reqs[j]);
-                        n_prev_imgs++;
-
-                        #if MPI_DEBUG
-                            printf("\nRank 0 has sent picture %d of %d to rank %d", j, n_imgs_per_node[i], i);
-                        #endif
-                    }
-                    
-
-                       
-            #endif
-        }
-
-        printf("\nRank 0 has sent to all the nodes\n");
-
-        // node 0 computes filters on its images
-        apply_all_filters0(image->width, image->height, p, n_imgs_per_node[0]);
 
         #ifdef MPI_VERSION
             // macros to extract images' sizes now that the dims vector is not available
             
-            n_prev_imgs = n_imgs_per_node[0];
+            int n_prev_imgs = n_imgs_this_node;
 
             //requests vector
             MPI_Request reqs[num_imgs - n_prev_imgs];
 
             // receive images from all the other nodes
             for(i=1; i < num_nodes; i++){
-                for(j=0; j < n_imgs_per_node[i]; j++){
-                    #define REC_INDEX (n_prev_imgs - n_imgs_per_node[0])
-                    MPI_Irecv(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,3, MPI_COMM_WORLD, &reqs[REC_INDEX]);
+                for(j=0; j < N_IMGS_NODE(i); j++){
+                    #define REC_INDEX (n_prev_imgs - n_imgs_this_node)
+                    MPI_Irecv(p[n_prev_imgs], WID(n_prev_imgs)*HEI(n_prev_imgs), mpi_pixel_type, i,3, MPI_COMM_WORLD, &reqs[REC_INDEX]);
                     n_prev_imgs++;
                 }
             }
-            MPI_Waitall((num_imgs - n_imgs_per_node[0]), reqs, MPI_STATUSES_IGNORE);
+            MPI_Waitall((num_imgs - n_imgs_this_node), reqs, MPI_STATUSES_IGNORE);
         #endif
 
 
-    } else {
-        // NODES WITH RANK >= 1
-
-            #ifdef MPI_VERSION
-
-                // nodes with rank >= 1 receive the number of images they have to process
-                MPI_Recv(&n_imgs_this_node, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &comm_status);
-
-                if(n_imgs_this_node > 0){
-
-                    // nodes with rank >= 1 receive the dimensions vector and the pixels matrix
-                    int dims[2 * n_imgs_this_node];
-                    MPI_Recv(dims, 2 * n_imgs_this_node, MPI_INT, 0, 1, MPI_COMM_WORLD, &comm_status);
-                    int total_num_pixels = 0;
-                    for(j=0; j < n_imgs_this_node; j++){
-                        total_num_pixels += dims[j] * dims[n_imgs_this_node + j]; 
-                    }
-                    // allocate array of pointers to pixels' vectors
-                    pixel ** p_rec = (pixel **)malloc(sizeof(pixel *) * total_num_pixels);
-
-                    //allocate array of pixels for each image
-                    for(j=0; j<n_imgs_this_node; j++){
-                        p_rec[j] = (pixel *)malloc( dims[j] * dims[n_imgs_this_node + j] * sizeof( pixel ) ) ;
-                    }
-
-                    //requests vector
-                    MPI_Request reqs[n_imgs_this_node];
-
-                    //receive images to process
-                    for(i=0; i<n_imgs_this_node; i++){
-                        MPI_Irecv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, &reqs[i]);
-                    }
-                    
-                    // other node computes filters on its images and send them back to rank 0
-                    apply_all_filters(dims, &(dims[n_imgs_this_node]), p_rec, n_imgs_this_node, reqs, mpi_pixel_type);
-
-
-                }
-                
-
-            #endif
-    }
+    } 
 
     #ifdef MPI_VERSION
         MPI_Finalize();
