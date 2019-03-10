@@ -166,12 +166,33 @@ int main( int argc, char ** argv )
         int num_imgs = image->n_images;
         printf("\nThis GIF has %d sub-images\n", num_imgs);
 
+        MPI_Request reqs[num_imgs];
+
+        // send msg with sizes of all pictures
+        for(i=1; i<num_nodes; i++){
+            MPI_Isend(&num_imgs, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &reqs[i]);
+        }
+
+        int dims[2*num_imgs];
+        // populate dimensions vector
+        for(j=0; j < num_imgs; j++){
+            dims[j] = image->width[j];
+            dims[num_imgs + j] = image->height[num_imgs + j];
+        }
         
         // send msg with sizes of all pictures
         for(i=1; i<num_nodes; i++){
-            
+            MPI_Send(dims, 2*num_nodes, MPI_INT, i, 1, MPI_COMM_WORLD);
         }
 
+
+    } else {
+        // rank >=1
+        MPI_Request req;
+
+        // receive num of imgs
+        int n_imgs_this_node;
+        MPI_Irecv(&n_imgs_this_node, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &req);
 
     }
     
