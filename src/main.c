@@ -781,7 +781,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold ) // 5, 20
                 //*** one thing that if checks only j not k...
                 //*** WHAT IF not using `collapse`?
                 // #pragma omp for collapse(2) schedule(static,width) 
-                #pragma omp for collapse(2) schedule(dynamic, width) 
+                #pragma omp for collapse(2) schedule(dynamic, width) reduction(||:end)
                 for(j=size; j<height-size;j++)
                 {
                     for(k=size; k<width-size; k++)
