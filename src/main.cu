@@ -46,7 +46,8 @@
     }
 #endif
 
-
+#define CONV(l,c,nb_c) \
+    (l)*(nb_c)+(c)
 
 int main( int argc, char ** argv )
 {
@@ -137,21 +138,73 @@ int main( int argc, char ** argv )
         appendNumToRow(duration);
         gettimeofday(&t1, NULL);
     #endif
-    //#pragma omp parallel for shared(p) schedule(dynamic)
+    int j, k ;
+    int end = 0 ;
+    int n_iter = 0 ;
+    int size = 5; // blur kernel size
+    int threshold = 20;
+    pixel * newP ;
+
     for ( i = 0 ; i < image->n_images ; i++ )
     {
         width = image->width[i] ;
         height = image->height[i] ;
-        pixel * pi = p[i];
 
-        /*Apply grey filter: convert the pixels into grayscale */
-        // apply_gray_filter(width, height, pi);
+        int N = width * height;
 
-        /*Apply blur filter with convergence value*/
-        // apply_blur_filter( width, height, pi, 5, 20 ) ;
+        /* Allocate array of new pixels */
+        newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
+        
+        /* GPU */
+        pixel* dPi;
+        pixel* dNewP;
 
-        /* Apply sobel filter on pixels */
-        // apply_sobel_filter(width, height, pi);
+        cudaMalloc((void**)&dPi, N * sizeof( pixel ));    
+        cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
+        /* Perform at least one blur iteration */
+        do
+        {
+            end = 1 ;
+            n_iter++ ;
+
+            cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
+            
+            dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+            dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, 5);
+
+            cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+            
+            for(j=1; j<height-1; j++)
+            {
+                for(k=1; k<width-1; k++)
+                {
+
+                    float diff_r ;
+                    float diff_g ;
+                    float diff_b ;
+
+                    diff_r = (newP[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+                    diff_g = (newP[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+                    diff_b = (newP[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+
+                    if ( diff_r > threshold || -diff_r > threshold 
+                            ||
+                             diff_g > threshold || -diff_g > threshold
+                             ||
+                              diff_b > threshold || -diff_b > threshold
+                       ) {
+                        end = 0 ;
+                    }
+
+                    p[i][CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
+                    p[i][CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
+                    p[i][CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
+                }
+            }
+
+        }
+        while ( threshold > 0 && !end ) ;
 
     }
     #if LOG_FILTERS
