@@ -46,10 +46,10 @@ $(OBJ_DIR)/%.o : $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cu
-	$(NCC) -I=include -c -o $@ $^
+	$(NCC) $(CFLAGS) -c -o $@ $^
 
 sobelf:$(OBJ)
-	$(NCC) -I=include -o $@ $^ $(LDFLAGS)
+	$(NCC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f sobelf $(OBJ)

@@ -5,4 +5,10 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
-animated_gif * load_pixels( char * filename );
+#ifdef __cplusplus
+extern "C"{
+#endif 
+    animated_gif * load_pixels( char * filename );
+#ifdef __cplusplus
+}
+#endif
