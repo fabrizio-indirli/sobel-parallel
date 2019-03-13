@@ -1116,7 +1116,7 @@ int main( int argc, char ** argv )
 
     /* Apply sobel filter on pixels */
     gettimeofday(&t1, NULL);
-    apply_sobel_filter( image ) ;
+    // apply_sobel_filter( image ) ;
     gettimeofday(&t2, NULL);
     duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
     printf( "SOBEL FILTER done in %lf s\n", duration ) ;
