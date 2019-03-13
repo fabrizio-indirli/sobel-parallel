@@ -11,20 +11,24 @@ apply_gray_filter( int width, int height, pixel * pi )
         double duration; //added for time checking
         gettimeofday(&t1, NULL);
     #endif */
-
-    for ( j = 0 ; j < width * height ; j++ )
+    #pragma omp parallel default(none) private(j) shared(pi,width,height)
     {
-        int moy ;
+        #pragma omp for schedule(static)
+        for ( j = 0 ; j < width * height ; j++ )
+        {
+            int moy ;
 
-        // moy = pi[j].r/4 + ( pi[j].g * 3/4 ) ;
-        moy = (pi[j].r + pi[j].g + pi[j].b)/3 ;
-        if ( moy < 0 ) moy = 0 ;
-        if ( moy > 255 ) moy = 255 ;
+            // moy = pi[j].r/4 + ( pi[j].g * 3/4 ) ;
+            moy = (pi[j].r + pi[j].g + pi[j].b)/3 ;
+            if ( moy < 0 ) moy = 0 ;
+            if ( moy > 255 ) moy = 255 ;
 
-        pi[j].r = moy ;
-        pi[j].g = moy ;
-        pi[j].b = moy ;
+            pi[j].r = moy ;
+            pi[j].g = moy ;
+            pi[j].b = moy ;
+        }
     }
+    
     
     /* #if SOBELF_DEBUG
         gettimeofday(&t2, NULL);

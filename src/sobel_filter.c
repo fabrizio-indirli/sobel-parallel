@@ -11,7 +11,7 @@ void apply_sobel_filter(int width, int height, pixel * pi){
     pixel * sobel ;
     sobel = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
 
-    #pragma omp parallel default(none) private(j,k) shared(width,height,pi,sobel)
+    #pragma omp parallel default(none) private(j,k) shared(width,height,pi,sobel) //***
     {
         // `dynamic` can be a better choice, since there is an if statement that might invoke imbalance for the iteration.
         // Actually nope... static one is faster. 
@@ -44,6 +44,7 @@ void apply_sobel_filter(int width, int height, pixel * pi){
 
                 val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
 
+                val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
 
                 if ( val_blue > 50 )
                 {
@@ -72,4 +73,4 @@ void apply_sobel_filter(int width, int height, pixel * pi){
     }
     free(sobel) ;
 } 
-
+    
