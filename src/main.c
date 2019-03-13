@@ -123,7 +123,7 @@ int main( int argc, char ** argv )
         gettimeofday(&t1, NULL);
     #endif
     
-    if (image->n_images <= num_threads)
+    if (image->n_images > num_threads)
     {
         #pragma omp parallel default(none) private(i,width,height) shared(p,image)
         {
@@ -131,7 +131,7 @@ int main( int argc, char ** argv )
             #pragma omp for schedule(static,1)
             for(i = 0 ; i < image->n_images; i++)
             {
-                printf("p[%d] from thread #%d\n", i, rank);
+                printf("[BLUR] p[%d] from thread #%d\n", i, rank);
                 width = image->width[i] ;
                 height = image->height[i] ;
                 pixel * pi = p[i];
@@ -180,7 +180,7 @@ int main( int argc, char ** argv )
 
     // }
 
-    if (image->n_images <= num_threads)
+    if (image->n_images > num_threads)
     {
         #pragma omp parallel default(none) private(i,width,height) shared(p,image)
         {
@@ -206,7 +206,7 @@ int main( int argc, char ** argv )
             height = image->height[i] ;
             pixel * pi = p[i];
 
-            /*Apply grey filter: convert the pixels into grayscale */
+            /*Apply blur filter with convergence value*/
             apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
         }
     }
@@ -218,25 +218,54 @@ int main( int argc, char ** argv )
         gettimeofday(&t1, NULL);
     #endif
 
+    if (image->n_images > num_threads)
+    {
+        #pragma omp parallel default(none) private(i,width,height) shared(p,image)
+        {
+            int rank = omp_get_thread_num();
+            #pragma omp for schedule(static,1)
+            for(i = 0 ; i < image->n_images; i++)
+            {
+                printf("p[%d] from thread #%d\n", i, rank);
+                width = image->width[i] ;
+                height = image->height[i] ;
+                pixel * pi = p[i];
 
+                /* Apply sobel filter on pixels */
+                apply_sobel_filter(width, height, pi);
+            }
+        }
+    }
+    else
+    {
+        for ( i = 0 ; i < image->n_images ; i++ )
+        {
+            width = image->width[i] ;
+            height = image->height[i] ;
+            pixel * pi = p[i];
+
+            /* Apply sobel filter on pixels */
+            apply_sobel_filter_omp(width, height, pi);
+        }
+    }
 
     //#pragma omp parallel for shared(p) schedule(dynamic)
-    for ( i = 0 ; i < image->n_images ; i++ )
-    {
-        width = image->width[i] ;
-        height = image->height[i] ;
-        pixel * pi = p[i];
+    // for ( i = 0 ; i < image->n_images ; i++ )
+    // {
+    //     width = image->width[i] ;
+    //     height = image->height[i] ;
+    //     pixel * pi = p[i];
 
-        /*Apply grey filter: convert the pixels into grayscale */
-        // apply_gray_filter(width, height, pi);
+    //     /*Apply grey filter: convert the pixels into grayscale */
+    //     // apply_gray_filter(width, height, pi);
 
-        /*Apply blur filter with convergence value*/
-        // apply_blur_filter( width, height, pi, 5, 20 ) ;
+    //     /*Apply blur filter with convergence value*/
+    //     // apply_blur_filter( width, height, pi, 5, 20 ) ;
 
-        /* Apply sobel filter on pixels */
-        // apply_sobel_filter(width, height, pi);
+    //     /* Apply sobel filter on pixels */
+    //     // apply_sobel_filter(width, height, pi);
 
-    }
+    // }
     #if LOG_FILTERS
         gettimeofday(&t2, NULL);
         duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);

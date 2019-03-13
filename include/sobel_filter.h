@@ -6,3 +6,4 @@
 #endif
 
 void apply_sobel_filter(int width, int height, pixel * pi);
+void apply_sobel_filter_omp(int width, int height, pixel * pi);
