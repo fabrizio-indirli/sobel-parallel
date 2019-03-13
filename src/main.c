@@ -51,7 +51,7 @@ int num_nodes, my_rank;
 #endif
 
 void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs, 
-                        MPI_Request * reqs, MPI_Datatype mpi_pixel_type){
+                        MPI_Datatype mpi_pixel_type, MPI_Request * reqs){
     int i, width, height;
     for ( i = 0 ; i < num_subimgs ; i++ )
     {
@@ -63,7 +63,6 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs,
         width = ws[i];
         height = hs[i];
 
-        MPI_Wait(&reqs[i], MPI_STATUS_IGNORE);
 
         /*Apply grey filter: convert the pixels into grayscale */
         apply_gray_filter(width, height, pi);
@@ -75,7 +74,8 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs,
         apply_sobel_filter(width, height, pi);
 
         /* Send back to rank 0 */
-        MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &(reqs[i]));
+        if(my_rank > 0)
+            MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &(reqs[i]));
 
     }
 }
@@ -204,10 +204,10 @@ int main( int argc, char ** argv )
     int i, j;
    
     int num_imgs = 0;
+    pixel ** p ;
 
     if(my_rank == 0){
         // work scheduling done by first node
-        pixel ** p ;
         p = image->p ;
         num_imgs = image->n_images;
         printf("\nThis GIF has %d sub-images\n", num_imgs);
@@ -229,28 +229,131 @@ int main( int argc, char ** argv )
 
 
     //compute pixels (heights) of each process
-    #define NUM_PARTS num_nodes
-    #define HEIGHT(j) image->height[j]
+    #define HEIGHT(j) dims[j]
+    #define WIDTH(j) dims[j + num_imgs]
+    
+    // vectors to send (NOT CONSIDERING THE OVERLAPS)
     int hxn[num_nodes][num_imgs]; // heights per node
+    int pxn[num_nodes][num_imgs]; // pixels per node
     int start_h[num_nodes][num_imgs]; // start height
+    int displs[num_nodes][num_imgs]; // displacements
 
-    int rest, height_x_node;
+    if(my_rank == 0){
+        int rest, height_x_node;
+        
+        for(i=0; i < num_nodes; i++){
+            start_h[i][0] = 0;
+            displs[i][0] = 0;
+            for(j=0; j<num_imgs; j++){
+                rest = HEIGHT(j) % num_nodes;
+                hxn[i][j] = (i < rest) ? (HEIGHT(j)/num_nodes + 1) : (HEIGHT(j)/num_nodes);
+                pxn[i][j] = hxn[i][j]*WIDTH(j);
+                if(j < (num_imgs - 1)) {
+                    start_h[i][j+1] = start_h[i][j] + hxn[i][j];
+                    displs[i][j+1] = displs[i][j] + hxn[i][j]*WIDTH(j);
+                }
+            }
+        }
+    }
+    
+    int pxn_this_node_sc[num_imgs]; // pixels received with scatterv for each image
+    int hxn_this_node_sc[num_imgs]; // num of lines received with scatterv for each image
 
-    for(i=0; i < num_nodes; i++){
-        start_h[i][0] = 0;
-        for(j=0; j<num_imgs; j++){
-            rest = HEIGHT(j) % num_nodes;
-            hxn[i][j] = (i < rest) ? (HEIGHT(j)/num_nodes + 1) : (HEIGHT(j)/num_nodes);
-            if(j < (num_imgs - 1)) start_h[i][j+1] = start_h[i][j] + hxn[i][j];
+    // populate vector "hxn_this_node"
+    MPI_Scatter(hxn, num_imgs, MPI_INT, hxn_this_node_sc, num_imgs, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // populate vector "pxn_this_node"
+    for(j=0; j < num_imgs; j++)
+        pxn_this_node_sc[j] = WIDTH(j) * hxn_this_node_sc[j];
+
+
+    pixel ** p_rec = (pixel **)malloc(sizeof(pixel *) * num_imgs);
+    pixel ** p_rec_scatt_start = (pixel **)malloc(sizeof(pixel *) * num_imgs);
+
+    
+    #define HXN(i, j) (i < (num_nodes-1)) ? (hxn[i][j] + 1) : (hxn[i][j])
+
+    // additional lines to send
+    #define FIRST_LINE(j) (my_rank > 0) ? (start_h[i][j] - 1) : (start_h[i][j])
+    #define LAST_LINE(j) (my_rank == (num_nodes - 1)) ? (start_h[i][j] + hxn[i][j]) : (start_h[i][j] + hxn[i][j] + 1)
+    #define FL_TAG 3
+    #define LL_TAG 4
+
+    // total number of pixels to receive and store for each image, including the additional lines up and down
+    // but rank 0 and last rank only take 1 additional line (respectively above and below)
+    #define PIX_STORED(j) ((my_rank == 0 || my_rank == (num_nodes - 1)) ? (pxn_this_node_sc[j] + WIDTH(j)) : (pxn_this_node_sc[j] + 2*WIDTH(j)))
+
+    //allocate array of pixels for each image
+    for(j=0; j<num_imgs; j++){
+        p_rec[j] = (pixel *)malloc( PIX_STORED(j) * sizeof( pixel ) ) ;
+        p_rec_scatt_start[j] = (my_rank > 0) ? (&p_rec[j][WIDTH(j)]) : p_rec[j];
+    }
+
+    int k;
+    pixel * line1ToSend, * line2ToSend;
+
+    // iterate on the images: scatter them
+    for(j=0; j<num_imgs; j++){
+
+        // send the separate parts to compute with scatterv
+        MPI_Scatterv(p[j], pxn[j], displs[j], mpi_pixel_type, 
+        p_rec_scatt_start[j], pxn_this_node_sc[j], mpi_pixel_type, 0, MPI_COMM_WORLD);
+        
+        if(my_rank==0){
+            // rank 0 sends additional lines to the other nodes
+
+            line1ToSend = (pixel *)malloc(sizeof(pixel) * WIDTH(j));
+            line2ToSend = (pixel *)malloc(sizeof(pixel) * WIDTH(j));
+
+            for(i=1; i<num_nodes; i++){
+
+                for(k=0; k<WIDTH(j); k++){
+                    line1ToSend[k] = p[j][WIDTH(j) * FIRST_LINE(j) + k];
+                    if(i < (num_nodes - 1)) line2ToSend[k] = p[j][WIDTH(j) * LAST_LINE(j) + k];
+                    }
+
+                // send first additional line to other ranks
+                MPI_Send(line1ToSend, WIDTH(j), mpi_pixel_type, i, FL_TAG, MPI_COMM_WORLD);
+
+                // send last additional line to other ranks (except the last one)
+                if(i < (num_nodes - 1))
+                    MPI_Send(line2ToSend, WIDTH(j), mpi_pixel_type, i, FL_TAG, MPI_COMM_WORLD);
+     
+            }
+        } else {
+            // ranks >= 1 receive all the additional lines
+
+            // receive first additional line from rank 0
+            MPI_Recv(p_rec[j], WIDTH(j), mpi_pixel_type, 0, FL_TAG, MPI_COMM_WORLD, &comm_status);
+
+            // receive the last additional line, except for the last node
+            if(my_rank < (num_nodes - 1))
+                MPI_Recv(&p_rec[j][pxn_this_node_sc[j]], WIDTH(j), mpi_pixel_type, 0, LL_TAG, MPI_COMM_WORLD, &comm_status);
+
         }
     }
 
-    #define HXN(i, j) (i < (num_nodes-1)) ? (hxn[i][j] + 1) : (hxn[i][j])
-    #define STH(i, j) (i > 0) ? (start_h[i][j] - 1) : (start_h[i][j])
+    if(my_rank > 0) p = p_rec;
 
+    //requests vector
+    MPI_Request reqs[num_imgs];
 
-    // iterate on the images
-    for(j=0; j<num_imgs; j++)
+    // apply filters and send back to rank 0
+    apply_all_filters(dims, hxn_this_node_sc, p, num_imgs, mpi_pixel_type, reqs);
+    MPI_Waitall(num_imgs, reqs, MPI_STATUSES_IGNORE);
+
+    if(my_rank> 0){
+        //requests vector
+        MPI_Request rec_reqs[num_imgs*num_nodes];
+
+        // rank 0 receives from all nodes
+        for(i=0; i < num_nodes; i++){
+            for(j=0; j < num_imgs; j++){
+                MPI_Irecv()
+            }
+        }
+
+    }
 
 
     #ifdef MPI_VERSION
