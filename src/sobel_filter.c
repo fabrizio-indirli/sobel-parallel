@@ -1,5 +1,5 @@
 #include "sobel_filter.h"
-#include <omp.h>
+
 
 #define CONV(l,c,nb_c) \
     (l)*(nb_c)+(c)

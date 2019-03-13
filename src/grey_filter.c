@@ -1,4 +1,5 @@
 #include "grey_filter.h"
+#include <omp.h>
 
 void
 apply_gray_filter( int width, int height, pixel * pi )
