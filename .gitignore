@@ -1,1 +1,10 @@
 .vscode/
+images/processed/test.gif
+clean_test.sh.bck
+images/processed/1-cuda.gif
+images/processed/Mandelbrot-large.gif
+images/processed/porsche-cuda.gif
+images/processed/Produits_sous_linux-cuda.gif
+images/processed/stone.gif
+logs_plots/filter_log.csv
+.gitignore
