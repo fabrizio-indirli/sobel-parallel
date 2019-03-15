@@ -91,6 +91,16 @@ void printVector(int * v, int n){
     printf("]\n");
 }
 
+void printHexVector(pixel ** v, int n){
+    int i;
+    printf("[");
+    for(i=0; i<n; i++){
+        printf(" %#x ", v[i]);
+    }
+    printf("]\n");
+}
+
+
 int main( int argc, char ** argv )
 {
 
@@ -106,6 +116,7 @@ int main( int argc, char ** argv )
         return 1 ;
     }
 
+    printf("Rank %d has pid=%d\n", my_rank, getpid());
 
     #ifdef MPI_VERSION
         /* If MPI is enabled */
@@ -210,6 +221,12 @@ int main( int argc, char ** argv )
     //compute pixels (heights) of each process
     #define HEIGHT(j) dims[j]
     #define WIDTH(j) dims[j + num_imgs]
+
+    // print img dims
+    for(j=0; j < num_imgs; j++){
+        printf("Rank %d: image %d has width %d and height %d\n", 
+                my_rank, j, WIDTH(j), HEIGHT(j));
+    }
     
     // vectors to send (NOT CONSIDERING THE OVERLAPS)
     int hxn[num_nodes][num_imgs]; // heights per node
@@ -272,7 +289,7 @@ int main( int argc, char ** argv )
     //allocate array of pixels for each image
     for(j=0; j<num_imgs; j++){
         p_rec[j] = (pixel *)malloc( PIX_STORED(j) * sizeof( pixel ) ) ;
-        p_rec_scatt_start[j] = (my_rank > 0) ? (&p_rec[j][WIDTH(j)]) : p_rec[j];
+        p_rec_scatt_start[j] = (my_rank > 0) ? (&(p_rec[j][WIDTH(j)])) : p_rec[j];
     }
 
     int k;
@@ -286,6 +303,9 @@ int main( int argc, char ** argv )
             printf("Sizes for img %d: ", j); printVector(pxn[j], num_nodes);
             printf("DIsplacements for img %d: ", j); printVector(displs[j], num_nodes);
         }
+
+        printf("p_rec vector for node %d: ", my_rank); printHexVector(p_rec, num_imgs);
+        printf("p_rec_scatt_start vector for node %d: ", my_rank); printHexVector(p_rec, num_imgs);
 
         // send the separate parts to compute with scatterv
         MPI_Scatterv(p[j], pxn[j], displs[j], mpi_pixel_type, 
