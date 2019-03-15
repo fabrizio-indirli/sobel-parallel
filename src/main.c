@@ -80,38 +80,15 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs,
     }
 }
 
-void apply_all_filters0(int * ws, int * hs, pixel ** p, int num_subimgs){
-    int i, width, height;
-    for ( i = 0 ; i < num_subimgs ; i++ )
-    {
-        #if MPI_DEBUG
-            printf("\nProcess %d is applying filters on image %d of %d\n",
-            my_rank, i, num_subimgs);
-        #endif
-        pixel * pi = p[i];
-        width = ws[i];
-        height = hs[i];
-
-
-        /*Apply grey filter: convert the pixels into grayscale */
-        apply_gray_filter(width, height, pi);
-
-        /*Apply blur filter with convergence value*/
-        apply_blur_filter( width, height, pi, 5, 20 ) ;
-
-        /* Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
-
-    }
-}
 
 
 void printVector(int * v, int n){
     int i;
+    printf("[");
     for(i=0; i<n; i++){
         printf(" %d ", v[i]);
     }
-    printf("\n");
+    printf("]\n");
 }
 
 int main( int argc, char ** argv )
@@ -210,12 +187,13 @@ int main( int argc, char ** argv )
         // work scheduling done by first node
         p = image->p ;
         num_imgs = image->n_images;
-        printf("\nThis GIF has %d sub-images\n", num_imgs);
+        printf("This GIF has %d sub-images\n", num_imgs);
 
     }
 
     // send num of imgs to all the nodes
     MPI_Bcast(&num_imgs, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    printf("Rank %d:  num_imgs broadcast\n", my_rank);
     
     // build sizes vector and send it to everyone
     int dims[2*num_imgs];
@@ -226,6 +204,7 @@ int main( int argc, char ** argv )
         }
     }
     MPI_Bcast(dims, 2*num_imgs, MPI_INT, 0, MPI_COMM_WORLD);
+    printf("Rank %d:  dims broadcast\n", my_rank);
 
 
     //compute pixels (heights) of each process
@@ -246,17 +225,20 @@ int main( int argc, char ** argv )
             start_h[j][0] = 0;
             displs[j][0] = 0;
             rest = HEIGHT(j) % num_nodes;
+            printf("Subimg %d has %d pixels, with an height of %d\n", j, WIDTH(j)*HEIGHT(j), HEIGHT(j));
 
             for(i=0; i< num_nodes; i++){
                 hxn[i][j] = (i < rest) ? (HEIGHT(j)/num_nodes + 1) : (HEIGHT(j)/num_nodes);
                 pxn[j][i] = hxn[i][j]*WIDTH(j);
 
                 if(j < (num_imgs - 1)) {
-                    start_h[j][i+1] = start_h[i][j] + hxn[i][j];
-                    displs[j][i+1] = displs[i][j] + hxn[i][j]*WIDTH(j);
+                    start_h[j][i+1] = start_h[j][i] + hxn[i][j];
+                    displs[j][i+1] = displs[j][i] + hxn[i][j]*WIDTH(j);
                 }
             }
         }
+
+        printf("Rank 0 has computed parts of images\n");
     }
     
     int pxn_this_node_sc[num_imgs]; // pixels received with scatterv for each image
@@ -264,6 +246,7 @@ int main( int argc, char ** argv )
 
     // populate vector "hxn_this_node"
     MPI_Scatter(hxn, num_imgs, MPI_INT, hxn_this_node_sc, num_imgs, MPI_INT, 0, MPI_COMM_WORLD);
+    printf("Rank %d:  scatter hxn\n", my_rank);
 
     // populate vector "pxn_this_node"
     for(j=0; j < num_imgs; j++)
@@ -297,6 +280,12 @@ int main( int argc, char ** argv )
 
     // iterate on the images: scatter them
     for(j=0; j<num_imgs; j++){
+        printf("Rank %d: preparing to scatter image %d\n", my_rank, j);
+
+        if(my_rank==0){
+            printf("Sizes for img %d: ", j); printVector(pxn[j], num_nodes);
+            printf("DIsplacements for img %d: ", j); printVector(displs[j], num_nodes);
+        }
 
         // send the separate parts to compute with scatterv
         MPI_Scatterv(p[j], pxn[j], displs[j], mpi_pixel_type, 
@@ -304,7 +293,7 @@ int main( int argc, char ** argv )
         
         if(my_rank==0){
             // rank 0 sends additional lines to the other nodes
-
+            printf("\n Scattered image %d\n", j);
             line1ToSend = (pixel *)malloc(sizeof(pixel) * WIDTH(j));
             line2ToSend = (pixel *)malloc(sizeof(pixel) * WIDTH(j));
 
