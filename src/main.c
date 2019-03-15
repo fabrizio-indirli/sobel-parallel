@@ -234,23 +234,26 @@ int main( int argc, char ** argv )
     
     // vectors to send (NOT CONSIDERING THE OVERLAPS)
     int hxn[num_nodes][num_imgs]; // heights per node
-    int pxn[num_nodes][num_imgs]; // pixels per node
-    int start_h[num_nodes][num_imgs]; // start height
-    int displs[num_nodes][num_imgs]; // displacements
+    int pxn[num_imgs][num_nodes]; // pixels per node
+    int start_h[num_imgs][num_nodes]; // start height
+    int displs[num_imgs][num_nodes]; // displacements
 
     if(my_rank == 0){
         int rest, height_x_node;
         
-        for(i=0; i < num_nodes; i++){
-            start_h[i][0] = 0;
-            displs[i][0] = 0;
-            for(j=0; j<num_imgs; j++){
-                rest = HEIGHT(j) % num_nodes;
+
+        for(j=0; j < num_imgs; j++){
+            start_h[j][0] = 0;
+            displs[j][0] = 0;
+            rest = HEIGHT(j) % num_nodes;
+
+            for(i=0; i< num_nodes; i++){
                 hxn[i][j] = (i < rest) ? (HEIGHT(j)/num_nodes + 1) : (HEIGHT(j)/num_nodes);
-                pxn[i][j] = hxn[i][j]*WIDTH(j);
+                pxn[j][i] = hxn[i][j]*WIDTH(j);
+
                 if(j < (num_imgs - 1)) {
-                    start_h[i][j+1] = start_h[i][j] + hxn[i][j];
-                    displs[i][j+1] = displs[i][j] + hxn[i][j]*WIDTH(j);
+                    start_h[j][i+1] = start_h[i][j] + hxn[i][j];
+                    displs[j][i+1] = displs[i][j] + hxn[i][j]*WIDTH(j);
                 }
             }
         }
@@ -317,7 +320,7 @@ int main( int argc, char ** argv )
 
                 // send last additional line to other ranks (except the last one)
                 if(i < (num_nodes - 1))
-                    MPI_Send(line2ToSend, WIDTH(j), mpi_pixel_type, i, FL_TAG, MPI_COMM_WORLD);
+                    MPI_Send(line2ToSend, WIDTH(j), mpi_pixel_type, i, LL_TAG, MPI_COMM_WORLD);
      
             }
         } else {
@@ -339,21 +342,36 @@ int main( int argc, char ** argv )
     MPI_Request reqs[num_imgs];
 
     // apply filters and send back to rank 0
-    apply_all_filters(dims, hxn_this_node_sc, p, num_imgs, mpi_pixel_type, reqs);
-    MPI_Waitall(num_imgs, reqs, MPI_STATUSES_IGNORE);
+    // apply_all_filters(dims, hxn_this_node_sc, p, num_imgs, mpi_pixel_type, reqs);
+    // MPI_Waitall(num_imgs, reqs, MPI_STATUSES_IGNORE);
 
-    if(my_rank> 0){
-        //requests vector
-        MPI_Request rec_reqs[num_imgs*num_nodes];
+    int width, height;
+    for ( i = 0 ; i < num_imgs ; i++ )
+    {
+        #if MPI_DEBUG
+            printf("\nProcess %d is applying filters on image %d of %d\n",
+            my_rank, i, num_imgs);
+        #endif
+        pixel * pi = p[i];
+        width = dims[i];
+        height = hxn_this_node_sc[i];
 
-        // rank 0 receives from all nodes
-        for(i=0; i < num_nodes; i++){
-            for(j=0; j < num_imgs; j++){
-                MPI_Irecv()
-            }
-        }
+
+        /*Apply grey filter: convert the pixels into grayscale */
+        apply_gray_filter(width, height, pi);
+
+        /*Apply blur filter with convergence value*/
+        apply_blur_filter( width, height, pi, 5, 20 ) ;
+
+        /* Apply sobel filter on pixels */
+        apply_sobel_filter(width, height, pi);
+
+        /* Send back to rank 0 */
+        MPI_Igatherv(pi, width * height, mpi_pixel_type, pi, pxn[i], displs[i], 
+                     mpi_pixel_type, 0, MPI_COMM_WORLD, reqs);
 
     }
+
 
 
     #ifdef MPI_VERSION
