@@ -201,7 +201,42 @@ int main( int argc, char ** argv )
     {
         width = image->width[i] ;
         height = image->height[i] ;
-        pixel * pi = p[i];
+        // pixel * pi = p[i]; // input
+
+        int N = width*height;
+
+        pixel* sobel;
+
+        sobel = (pixel *)malloc(N * sizeof( pixel ) ) ; // new image
+
+        /* GPU */
+        pixel* dPi;
+        pixel* dSobel;
+ 
+        cudaMalloc((void**)&dPi, N * sizeof( pixel ));
+        cudaMalloc((void**)&dSobel, N * sizeof( pixel ));
+        // malloc inside CUDA kernel?? possible? Not really used in CPU side...
+ 
+        cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
+ 
+        dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+        dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+        compute_sobel_filter<<<numBlocks,threadsPerBlock>>>(dSobel, dPi, height, width);
+ 
+        // cudaMemcpy(sobel, dSobel, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+        cudaMemcpy(sobel, dSobel, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+
+        for(j=1; j<height-1; j++)
+        {
+            for(k=1; k<width-1; k++)
+            {
+                p[i][CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+                p[i][CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+                p[i][CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+            }
+        }
+
+        free (sobel) ;
 
         /*Apply grey filter: convert the pixels into grayscale */
         // apply_gray_filter(width, height, pi);

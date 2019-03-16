@@ -17,7 +17,7 @@ SRC= dgif_lib.c \
 	openbsd-reallocarray.c \
 	quantize.c \
 	grey_filter.cu \
-	sobel_filter.c \
+	sobel_filter.cu \
 	load_pixels.c \
 	blur_filter.cu \
 	store_pixels.c
