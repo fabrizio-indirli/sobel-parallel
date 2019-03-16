@@ -37,3 +37,41 @@ apply_gray_filter( int width, int height, pixel * pi )
     #endif */
 }
 
+
+void
+apply_gray_filter_part( int width, int height, pixel * pi, int startheight, int finalheight )
+{
+    /*This version of the grey filter works only on one image at a time*/
+    int j;
+
+    /* #if SOBELF_DEBUG
+        struct timeval t0, t1, t2, tf; //added for time checking
+        double duration; //added for time checking
+        gettimeofday(&t1, NULL);
+    #endif */
+
+    #pragma omp parallel default(none) private(j) shared(pi,width,height, startheight, finalheight)
+    {   
+        #pragma omp for schedule(static) //*** default chunk size
+        for ( j = width*startheight ; j < width * finalheight ; j++ )
+        {
+            int moy ;
+
+            // moy = pi[j].r/4 + ( pi[j].g * 3/4 ) ;
+            moy = (pi[j].r + pi[j].g + pi[j].b)/3 ;
+            if ( moy < 0 ) moy = 0 ;
+            if ( moy > 255 ) moy = 255 ;
+
+            pi[j].r = moy ;
+            pi[j].g = moy ;
+            pi[j].b = moy ;
+        }
+    }
+    
+    /* #if SOBELF_DEBUG
+        gettimeofday(&t2, NULL);
+        duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
+        printf( "[DEBUG] Time needed to apply grey filter to all the images: %lf s\n",  duration);
+    #endif */
+}
+

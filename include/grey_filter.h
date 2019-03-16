@@ -3,3 +3,6 @@
 
 void
 apply_gray_filter( int width, int height, pixel * pi );
+
+void
+apply_gray_filter_part( int width, int height, pixel * pi, int startheight, int finalheight );
