@@ -3,17 +3,22 @@
 #define CONV(l,c,nb_c) \
     (l)*(nb_c)+(c)
 
-__global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int width, int size)
-{
+__global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, 
+                                    int width, int size, int * end, int threshold)
+{       
+
     int nHeight = height/10-size;
     int nWidth = width-size;
 
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int k = blockIdx.y * blockDim.y + threadIdx.y;
 
-    // int j, k;
+
     /* Apply blur on top part of image (10%) */
     // for(j=size; j < nHeight; j++)
+
+    atomicExch(end, 1); // assign 1 to shared variable 'end'
+
     if(j >= size && j < nHeight)
     {
         // for(k=size; k < nWidth; k++)
@@ -80,6 +85,35 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
             newP[CONV(j,k,width)].b = pi[CONV(j,k,width)].b ; 
         }
     }
+
+    if(j<height-1 && k<width-1){
+
+        float diff_r ;
+        float diff_g ;
+        float diff_b ;
+
+        diff_r = (newP[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
+        diff_g = (newP[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
+        diff_b = (newP[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
+
+        if ( diff_r > threshold || -diff_r > threshold 
+                ||
+                    diff_g > threshold || -diff_g > threshold
+                    ||
+                    diff_b > threshold || -diff_b > threshold
+            ) {
+            atomicExch(end, 0);
+        }
+
+        pi[CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
+        pi[CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
+        pi[CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
+    }
+
+    
+
+    
+    
     
 }
 

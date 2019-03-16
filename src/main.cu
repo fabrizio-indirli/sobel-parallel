@@ -139,8 +139,8 @@ int main( int argc, char ** argv )
         gettimeofday(&t1, NULL);
     #endif
     int j, k ;
-    int end = 0 ;
-    int n_iter = 0 ;
+    int end = 1;
+    int * end_d;
     int size = 5; // blur kernel size
     int threshold = 20;
     pixel * newP ;
@@ -151,60 +151,42 @@ int main( int argc, char ** argv )
         height = image->height[i] ;
 
         int N = width * height;
+        int n_iter = 0;
 
-        /* Allocate array of new pixels */
+        // Allocate array of new pixels
         newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
         
-        /* GPU */
+        // GPU
         pixel* dPi;
         pixel* dNewP;
 
         cudaMalloc((void**)&dPi, N * sizeof( pixel ));    
         cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
-        /* Perform at least one blur iteration */
-        do
-        {
-            end = 1 ;
-            n_iter++ ;
 
-            cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
-            
+        cudaMalloc((int **)&end_d, 1*sizeof(int));
+        cudaMemcpy(end_d, &end, sizeof(int), cudaMemcpyHostToDevice);
+
+        // copy pixels to device
+        cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
+
+        // Perform at least one blur iteration
+        do
+        {            
             dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
             dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, 5);
+            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size, end_d, threshold);
 
-            cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+            // cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
             
-            for(j=1; j<height-1; j++)
-            {
-                for(k=1; k<width-1; k++)
-                {
-
-                    float diff_r ;
-                    float diff_g ;
-                    float diff_b ;
-
-                    diff_r = (newP[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
-                    diff_g = (newP[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
-                    diff_b = (newP[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
-
-                    if ( diff_r > threshold || -diff_r > threshold 
-                            ||
-                             diff_g > threshold || -diff_g > threshold
-                             ||
-                              diff_b > threshold || -diff_b > threshold
-                       ) {
-                        end = 0 ;
-                    }
-
-                    p[i][CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
-                    p[i][CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
-                    p[i][CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
-                }
-            }
+            cudaMemcpy(&end, end_d, sizeof(int), cudaMemcpyDeviceToHost);
+            printf("On iteration %d of image %d the value of end is: %d\n", n_iter, i, end);
+            n_iter++;
 
         }
         while ( threshold > 0 && !end ) ;
+
+        // copy pixels back to ram
+        cudaMemcpy(p[i], dPi, N * sizeof(pixel), cudaMemcpyDeviceToHost);
 
     }
     #if LOG_FILTERS
@@ -228,7 +210,7 @@ int main( int argc, char ** argv )
         // apply_blur_filter( width, height, pi, 5, 20 ) ;
 
         /* Apply sobel filter on pixels */
-        // apply_sobel_filter(width, height, pi);
+        apply_sobel_filter(width, height, pi);
 
     }
     #if LOG_FILTERS

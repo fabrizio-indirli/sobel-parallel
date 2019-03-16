@@ -1,1 +1,8 @@
 .vscode/
+images/*
+clean_test.sh.bck
+logs_plots/filter_log.csv
+.gitignore
+images/processed/1.gif
+images/processed/australian-flag-large-cuda.gif
+logs_plots/filter_log.csv
