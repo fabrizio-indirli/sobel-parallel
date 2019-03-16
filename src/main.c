@@ -116,13 +116,14 @@ int main( int argc, char ** argv )
         return 1 ;
     }
 
-    printf("Rank %d has pid=%d\n", my_rank, getpid());
 
     #ifdef MPI_VERSION
         /* If MPI is enabled */
         MPI_Init(&argc, &argv);
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+        printf("Rank %d has pid=%d\n", my_rank, getpid());
     
         #if GDB_DEBUG
             if(my_rank==0) {
@@ -248,7 +249,7 @@ int main( int argc, char ** argv )
                 hxn[i][j] = (i < rest) ? (HEIGHT(j)/num_nodes + 1) : (HEIGHT(j)/num_nodes);
                 pxn[j][i] = hxn[i][j]*WIDTH(j);
 
-                if(j < (num_imgs - 1)) {
+                if(i < (num_nodes - 1)) {
                     start_h[j][i+1] = start_h[j][i] + hxn[i][j];
                     displs[j][i+1] = displs[j][i] + hxn[i][j]*WIDTH(j);
                 }
@@ -257,11 +258,14 @@ int main( int argc, char ** argv )
 
         printf("Rank 0 has computed parts of images\n");
     }
-    
-    int pxn_this_node_sc[num_imgs]; // pixels received with scatterv for each image
-    int hxn_this_node_sc[num_imgs]; // num of lines received with scatterv for each image
 
-    // populate vector "hxn_this_node"
+    // pixels received by this node with scatterv for each image
+    int pxn_this_node_sc[num_imgs]; 
+
+    // num of lines (height) received by this node with scatterv for each image
+    int hxn_this_node_sc[num_imgs]; 
+
+    // populate vector "hxn_this_node_sc"
     MPI_Scatter(hxn, num_imgs, MPI_INT, hxn_this_node_sc, num_imgs, MPI_INT, 0, MPI_COMM_WORLD);
     printf("Rank %d:  scatter hxn\n", my_rank);
 
@@ -282,11 +286,12 @@ int main( int argc, char ** argv )
     #define FL_TAG 3
     #define LL_TAG 4
 
-    // total number of pixels to receive and store for each image, including the additional lines up and down
+    // total number of pixels to receive and store for each image, including the additional lines up and down,
     // but rank 0 and last rank only take 1 additional line (respectively above and below)
     #define PIX_STORED(j) ((my_rank == 0 || my_rank == (num_nodes - 1)) ? (pxn_this_node_sc[j] + WIDTH(j)) : (pxn_this_node_sc[j] + 2*WIDTH(j)))
 
     //allocate array of pixels for each image
+    printf("Size of 'pixel' is: %lu\n", sizeof(pixel));
     for(j=0; j<num_imgs; j++){
         p_rec[j] = (pixel *)malloc( PIX_STORED(j) * sizeof( pixel ) ) ;
         p_rec_scatt_start[j] = (my_rank > 0) ? (&(p_rec[j][WIDTH(j)])) : p_rec[j];
@@ -305,7 +310,8 @@ int main( int argc, char ** argv )
         }
 
         printf("p_rec vector for node %d: ", my_rank); printHexVector(p_rec, num_imgs);
-        printf("p_rec_scatt_start vector for node %d: ", my_rank); printHexVector(p_rec, num_imgs);
+        printf("p_rec_scatt_start for node %d: ", my_rank); printHexVector(p_rec_scatt_start, num_imgs);
+        printf("pxn_this_node for node %d:", my_rank); printVector(pxn_this_node_sc, num_imgs);
 
         // send the separate parts to compute with scatterv
         MPI_Scatterv(p[j], pxn[j], displs[j], mpi_pixel_type, 
