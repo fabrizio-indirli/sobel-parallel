@@ -1,12 +1,12 @@
 SRC_DIR=src
 HEADER_DIR=include
-CUDA_DIR=/usr/local/cuda-10.0/include,/usr/local/cuda-10.0/lib64,/usr/local/cuda-10.0
+CUDA_DIR=/usr/local/cuda/include
 OBJ_DIR=obj
 
 CC=gcc
 NCC=nvcc
 CFLAGS=-O3 -I$(HEADER_DIR)
-NCCFLAGS=$(CFLAGS) -I$(CUDA_DIR)
+NCCFLAGS=$(CFLAGS) -I/usr/local/cuda/include -L/usr/local/cuda/lib64
 LDFLAGS=-lm
 
 SRC= dgif_lib.c \

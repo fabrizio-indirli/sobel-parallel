@@ -11,6 +11,7 @@
 
 #include <gif_lib.h>
 #include <cooperative_groups.h>
+#include <cuda_runtime.h>
 
 using namespace cooperative_groups;
 
@@ -659,7 +660,7 @@ void apply_gray_line( animated_gif * image )
     }
 }
 
-__global__ void compute_blur_filter(pixel* newP, pixel* pi, int* end, int height, int width, int size)
+__global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* end, int height, int width, int size)
 {
     int nHeight = height/10-size;
     int nWidth = width-size;
@@ -741,7 +742,7 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int* end, int height
         }
 
         // for(j=1; j<height-1; j++)
-        if{j>=1 && j<height-1}
+        if(j>=1 && j<height-1)
         {
             // for(k=1; k<width-1; k++)
             if(k>=1 && k<width-1)
@@ -751,9 +752,9 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int* end, int height
                 float diff_g ;
                 float diff_b ;
 
-                diff_r = (newP[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
-                diff_g = (newP[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
-                diff_b = (newP[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+                diff_r = (newP[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
+                diff_g = (newP[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
+                diff_b = (newP[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
 
                 if ( diff_r > threshold || -diff_r > threshold 
                         ||
@@ -770,7 +771,7 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int* end, int height
             }
         }
 
-        g.sync();
+        // g.sync();
     } while ( threshold > 0 && !end ) ;
     // free (newP) ;
 
@@ -780,13 +781,14 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int* end, int height
 void
 apply_blur_filter( animated_gif * image, int size, int threshold )
 {
-    int i, j, k ;
+    // int i, j, k ;
+    int i;
     int width, height ;
     int end = 0 ;
-    int n_iter = 0 ;
+    // int n_iter = 0 ;
 
     pixel ** p ;
-    pixel * newP ;
+    // pixel * newP ;
 
     /* Get the pixels of all images */
     p = image->p ;
@@ -795,14 +797,14 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
     /* Process all images */
     for ( i = 0 ; i < image->n_images ; i++ )
     {
-        n_iter = 0 ;
+        // n_iter = 0 ;
         width = image->width[i] ;
         height = image->height[i] ;
 
         int N = width * height;
 
         /* Allocate array of new pixels */
-        newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
+        // newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
         
         /* GPU */
         pixel* dPi;
@@ -821,7 +823,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             
         dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
         dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-        compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, end, height, width, size);
+        compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, threshold, end_d, height, width, size);
         
         cudaMemcpy(end_d, &end, sizeof(int), cudaMemcpyHostToDevice);
 
