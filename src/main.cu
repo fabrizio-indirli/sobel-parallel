@@ -768,14 +768,15 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         pixel* dPi;
         pixel* dNewP;
 
+        cudaMalloc((void**)&dPi, N * sizeof( pixel ));
+        cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
+
         /* Perform at least one blur iteration */
         do
         {
             end = 1 ;
             n_iter++ ;
 
-            cudaMalloc((void**)&dPi, N * sizeof( pixel ));
-            cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
 
             cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
             
