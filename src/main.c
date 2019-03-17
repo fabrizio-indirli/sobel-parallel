@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <mpi.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "load_pixels.h"
 #include "store_pixels.h"
@@ -21,13 +22,13 @@
 #include "datastr.h"
 
 #define SOBELF_DEBUG 0
-#define LOGGING 0
+#define LOGGING 1
 #define EXPORT 1
-#define MPI_DEBUG 1
+#define MPI_DEBUG 0
 #define GDB_DEBUG 0
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/plog_ser.csv"
+    #define LOG_FILENAME "./logs_plots/plog_mpi.csv"
     FILE *fOut;
 
     void writeNumToLog(double n){
@@ -38,8 +39,9 @@
         fprintf(fOut, "%lf,",n);
     }
 
-    void newRow(){
+    void newRow(fileName){
         fprintf(fOut, "\n");
+        fprintf(fOut, "%s", fileName);
     }
 
 #endif
@@ -128,19 +130,23 @@ int main( int argc, char ** argv )
     #endif
 
     
-    /*Open perfomance log file for debug*/
-    #if LOGGING
-        fOut = fopen(FILE_NAME,"a");
-        if(ftell(fOut)==0) //file is empty
-            fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
-        newRow();
-    #endif
+    
 
     if(my_rank == 0){
         // Only initial process loads the file
 
+
         input_filename = argv[1] ;
         output_filename = argv[2] ;
+
+        /*Open perfomance log file for debug*/
+        #if LOGGING
+            fOut = fopen(LOG_FILENAME,"a");
+            if(ftell(fOut)==0) //file is empty
+                fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
+            newRow(input_filename);
+        #endif
+
         gettimeofday(&t1, NULL); /* IMPORT Timer start */
 
         /* Load file and store the pixels in array */
