@@ -10,6 +10,7 @@
 #include <sys/time.h>
 
 #include <gif_lib.h>
+#include <cooperative_groups.h>
 
 #define SOBELF_DEBUG 0
 #define LOGGING 1
@@ -664,76 +665,114 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int k = blockIdx.y * blockDim.y + threadIdx.y;
 
+    int end;
+    atomicExch(end, 1);
     // int j, k;
     /* Apply blur on top part of image (10%) */
     // for(j=size; j < nHeight; j++)
-    if(j >= size && j < nHeight)
-    {
-        // for(k=size; k < nWidth; k++)
-        if (k >= size && k < nWidth)
+    grid_group g = this_grid();
+    do{
+        if(j >= size && j < nHeight)
         {
-            int stencil_j, stencil_k ;
-            int t_r = 0 ;
-            int t_g = 0 ;
-            int t_b = 0 ;
-
-            for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+            // for(k=size; k < nWidth; k++)
+            if (k >= size && k < nWidth)
             {
-                for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                int stencil_j, stencil_k ;
+                int t_r = 0 ;
+                int t_g = 0 ;
+                int t_b = 0 ;
+
+                for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
                 {
-                    t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
-                    t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
-                    t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+                    for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                    {
+                        t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+                        t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+                        t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+                    }
                 }
+
+                newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+                newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+                newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
             }
-
-            newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-            newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-            newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
         }
-    }
 
-    /* Apply blur on the bottom part of the image (10%) */
-    // for(j=height*0.9+size; j<height-size; j++)
-    if(j >= height*0.9+size && j < height-size)
-    {
-        // for(k=size; k<width-size; k++)
-        if(k >= size && k < nWidth)
+        /* Apply blur on the bottom part of the image (10%) */
+        // for(j=height*0.9+size; j<height-size; j++)
+        if(j >= height*0.9+size && j < height-size)
         {
-            int stencil_j, stencil_k ;
-            int t_r = 0 ;
-            int t_g = 0 ;
-            int t_b = 0 ;
-
-            for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+            // for(k=size; k<width-size; k++)
+            if(k >= size && k < nWidth)
             {
-                for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                int stencil_j, stencil_k ;
+                int t_r = 0 ;
+                int t_g = 0 ;
+                int t_b = 0 ;
+
+                for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
                 {
-                    t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
-                    t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
-                    t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+                    for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+                    {
+                        t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+                        t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+                        t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+                    }
                 }
+
+                newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+                newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+                newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
             }
-
-            newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
-            newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
-            newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
         }
-    }
 
-    /* Copy the middle part of the image */
-    // for(j=height/10-size; j<height*0.9+size; j++)
-    if (j >= height/10-size && j < height*0.9+size)
-    {
-        // for(k=size; k<width-size; k++)
-        if (k >= size && k < width-size)
+        /* Copy the middle part of the image */
+        // for(j=height/10-size; j<height*0.9+size; j++)
+        if (j >= height/10-size && j < height*0.9+size)
         {
-            newP[CONV(j,k,width)].r = pi[CONV(j,k,width)].r ; 
-            newP[CONV(j,k,width)].g = pi[CONV(j,k,width)].g ; 
-            newP[CONV(j,k,width)].b = pi[CONV(j,k,width)].b ; 
+            // for(k=size; k<width-size; k++)
+            if (k >= size && k < width-size)
+            {
+                newP[CONV(j,k,width)].r = pi[CONV(j,k,width)].r ; 
+                newP[CONV(j,k,width)].g = pi[CONV(j,k,width)].g ; 
+                newP[CONV(j,k,width)].b = pi[CONV(j,k,width)].b ; 
+            }
         }
-    }
-    
+
+        // for(j=1; j<height-1; j++)
+        if{j>=1 && j<height-1}
+        {
+            // for(k=1; k<width-1; k++)
+            if(k>=1 && k<width-1)
+            {
+
+                float diff_r ;
+                float diff_g ;
+                float diff_b ;
+
+                diff_r = (newP[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+                diff_g = (newP[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+                diff_b = (newP[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+
+                if ( diff_r > threshold || -diff_r > threshold 
+                        ||
+                            diff_g > threshold || -diff_g > threshold
+                            ||
+                            diff_b > threshold || -diff_b > threshold
+                    ) {
+                    atomicExch(end, 0);
+                }
+
+                pi[CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
+                pi[CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
+                pi[CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
+            }
+        }
+
+        g.sync();
+    } while ( threshold > 0 && !end ) ;
+    // free (newP) ;
+
 }
 
 
@@ -771,20 +810,33 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         cudaMalloc((void**)&dPi, N * sizeof( pixel ));
         cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
 
-        /* Perform at least one blur iteration */
-        do
-        {
-            end = 1 ;
-            n_iter++ ;
+        /* this_grid.sync() */
+        // int dN_iter;
+        // cudaMalloc(((void**))&dN_iter, sizeof(int));
 
-
-            cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
+        cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
             
-            dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
-            dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size);
+        dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+        dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+        compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size);
 
-            cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+        // cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+        cudaMemcpy(p[i], dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+
+        /* Perform at least one blur iteration */
+        // do
+        // {
+        //     end = 1 ;
+        //     n_iter++ ;
+
+
+        //     cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
+            
+        //     dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+        //     dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+        //     compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size);
+
+        //     cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
 
 
             // /* Apply blur on top part of image (10%) */
@@ -850,40 +902,40 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             //     }
             // }
             
-            for(j=1; j<height-1; j++)
-            {
-                for(k=1; k<width-1; k++)
-                {
+            // for(j=1; j<height-1; j++)
+            // {
+            //     for(k=1; k<width-1; k++)
+            //     {
 
-                    float diff_r ;
-                    float diff_g ;
-                    float diff_b ;
+            //         float diff_r ;
+            //         float diff_g ;
+            //         float diff_b ;
 
-                    diff_r = (newP[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
-                    diff_g = (newP[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
-                    diff_b = (newP[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
+            //         diff_r = (newP[CONV(j  ,k  ,width)].r - p[i][CONV(j  ,k  ,width)].r) ;
+            //         diff_g = (newP[CONV(j  ,k  ,width)].g - p[i][CONV(j  ,k  ,width)].g) ;
+            //         diff_b = (newP[CONV(j  ,k  ,width)].b - p[i][CONV(j  ,k  ,width)].b) ;
 
-                    if ( diff_r > threshold || -diff_r > threshold 
-                            ||
-                             diff_g > threshold || -diff_g > threshold
-                             ||
-                              diff_b > threshold || -diff_b > threshold
-                       ) {
-                        end = 0 ;
-                    }
+            //         if ( diff_r > threshold || -diff_r > threshold 
+            //                 ||
+            //                  diff_g > threshold || -diff_g > threshold
+            //                  ||
+            //                   diff_b > threshold || -diff_b > threshold
+            //            ) {
+            //             end = 0 ;
+            //         }
 
-                    p[i][CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
-                    p[i][CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
-                    p[i][CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
-                }
-            }
+            //         p[i][CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
+            //         p[i][CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
+            //         p[i][CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
+            //     }
+            // }
 
-        }
-        while ( threshold > 0 && !end ) ;
+        // }
+        // while ( threshold > 0 && !end ) ;
 
         // printf( "Nb iter for image %d\n", n_iter ) ;
 
-        free (newP) ;
+        // free (newP) ;
     }
 
 }
