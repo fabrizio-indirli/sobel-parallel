@@ -12,7 +12,7 @@
 #include <gif_lib.h>
 
 #define SOBELF_DEBUG 0
-#define LOGGING 1
+#define LOGGING 0
 
 #if LOGGING
     #define FILE_NAME "./logs_plots/plog_ser.csv"
