@@ -262,6 +262,10 @@ int main( int argc, char ** argv )
         my_start_heights[j] = START_HEIGHT(j, my_rank);
     }
 
+    printf("Rank %d, my_parts_heights: ", my_rank); printVector(my_part_heights, num_imgs);
+    printf("Rank %d, my_start_heights: ", my_rank); printVector(my_start_heights, num_imgs);
+
+
     int displs[num_imgs][num_nodes];
     int partsSizes[num_imgs][num_nodes];
     for(j=0; (j < num_imgs && my_rank==0); j++){
@@ -270,9 +274,7 @@ int main( int argc, char ** argv )
             partsSizes[j][i] = PART_HEIGHT(j,i) * WIDTH(j);
         }
     }
-
-    pixel ** p_rec = (pixel **)malloc(sizeof(pixel *) * num_imgs);
-    
+   
     
 
     //requests vector
@@ -287,35 +289,46 @@ int main( int argc, char ** argv )
 
     // apply filters and send back to rank 0
     int width, height;
-    for ( i = 0 ; i < num_imgs ; i++ )
+    for ( j = 0 ; j < num_imgs ; j++ )
     {
-        // wait for image i
-        MPI_Wait(&reqs[i], MPI_STATUS_IGNORE);
+        // wait for image j
+        MPI_Wait(&reqs[j], MPI_STATUS_IGNORE);
 
         #if MPI_DEBUG
             printf("\nProcess %d is applying filters on image %d of %d\n",
-            my_rank, i, num_imgs);
+            my_rank, j, num_imgs);
         #endif
-        pixel * pi = p[i];
-        width = dims[i];
-        height = HEIGHT(i);
+        pixel * pj = p[j];
+        width = dims[j];
+        height = HEIGHT(j);
 
 
         /*Apply grey filter: convert the pixels into grayscale */
-        apply_gray_filter_part(width, height, pi, my_start_heights[i], MY_FINAL_HEIGHT(i));
+        apply_gray_filter_part(width, height, pj, my_start_heights[j], MY_FINAL_HEIGHT(j));
 
         /*Apply blur filter with convergence value*/
-        apply_blur_filter_part( width, height, pi, 5, 20, my_start_heights[i], MY_FINAL_HEIGHT(i) ) ;
+        apply_blur_filter_part( width, height, pj, 5, 20, my_start_heights[j], MY_FINAL_HEIGHT(j) ) ;
 
         /* Apply sobel filter on pixels */
-        apply_sobel_filter_part(width, height, pi, my_start_heights[i], MY_FINAL_HEIGHT(i));
+        apply_sobel_filter_part(width, height, pj, my_start_heights[j], MY_FINAL_HEIGHT(j));
 
         /* Send back to rank 0 */
-        printf("Rank %d: preparing to gather for img %d\n", my_rank, i);
+        printf("Rank %d: preparing to gather for img %d which has computed %d lines\n", my_rank, i, PART_HEIGHT(i, my_rank));
         /* MPI_Igatherv(&pi[START_PIXEL(i, my_rank)], width * PART_HEIGHT(i, my_rank), mpi_pixel_type, pi, 
                     partsSizes[i], displs[i], mpi_pixel_type, 0, MPI_COMM_WORLD, reqs_final[i]); */
-        MPI_Gatherv(&pi[START_PIXEL(i, my_rank)], width * PART_HEIGHT(i, my_rank), mpi_pixel_type, pi, 
-                    partsSizes[i], displs[i], mpi_pixel_type, 0, MPI_COMM_WORLD);
+        
+
+        /* MPI_Gatherv(&pj[START_PIXEL(j, my_rank)], width * PART_HEIGHT(j, my_rank), mpi_pixel_type, p[j], 
+                    partsSizes[j], displs[j], mpi_pixel_type, 0, MPI_COMM_WORLD); */
+        
+        /* if(my_rank > 0) MPI_Send(&pj[START_PIXEL(j, my_rank)] , width * PART_HEIGHT(j, my_rank),
+                                    mpi_pixel_type, 0, 6, MPI_COMM_WORLD);
+        else {
+            for(i=1; i < num_nodes; i++){
+            MPI_Recv(&pj[START_PIXEL(j, my_rank)], width * PART_HEIGHT(j, i), mpi_pixel_type, i, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+        } */
+        
     }
 
 
