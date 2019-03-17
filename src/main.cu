@@ -14,6 +14,7 @@
 #include <cuda_runtime.h>
 
 using namespace cooperative_groups;
+namespace cg = cooperative_groups;
 
 #define SOBELF_DEBUG 0
 #define LOGGING 1
@@ -664,6 +665,7 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* 
 {
     int nHeight = height/10-size;
     int nWidth = width-size;
+    cg::grid_group grid = cg::this_grid();
 
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int k = blockIdx.y * blockDim.y + threadIdx.y;
@@ -672,7 +674,6 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* 
     // int j, k;
     /* Apply blur on top part of image (10%) */
     // for(j=size; j < nHeight; j++)
-    grid_group g = this_grid();
     do{
         if(j >= size && j < nHeight)
         {
@@ -765,13 +766,15 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* 
                     atomicExch(end, 0);
                 }
 
+                grid.sync();
+
                 pi[CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
                 pi[CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
                 pi[CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
             }
         }
 
-        // g.sync();
+    
     } while ( threshold > 0 && !end ) ;
     // free (newP) ;
 
@@ -802,6 +805,7 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         height = image->height[i] ;
 
         int N = width * height;
+        
 
         /* Allocate array of new pixels */
         // newP = (pixel *)malloc(N * sizeof( pixel ) ) ; 
@@ -823,7 +827,22 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             
         dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
         dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-        compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, threshold, end_d, height, width, size);
+
+        //argument passed to the kernel     
+        void *kernel_args[] = {
+        (void *)&dNewP,
+        (void *)&dPi,
+        (void *)&threshold,
+        (void *)&end_d,
+        (void *)&height,
+        (void *)&width,
+        (void *)&size, };
+
+        // compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, threshold, end_d, height, width, size);
+
+        //finally launch the kernel 
+        cudaLaunchCooperativeKernel((void*)compute_blur_filter,
+                                    numBlocks, threadsPerBlock, kernel_args);
         
         cudaMemcpy(end_d, &end, sizeof(int), cudaMemcpyHostToDevice);
 
