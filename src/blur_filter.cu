@@ -4,15 +4,19 @@
     (l)*(nb_c)+(c)
 
 __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, 
-                                    int width, int size, int * end, int threshold)
+                                    int width, int size, int * end, int threshold, int * sync)
 {       
 
     int nHeight = height/10-size;
     int nWidth = width-size;
 
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
-    int k = blockIdx.y * blockDim.y + threadIdx.y;
+    // int j = blockIdx.x * blockDim.x + threadIdx.x;
+    // int k = blockIdx.y * blockDim.y + threadIdx.y;
 
+    int l = blockIdx.x * blockDim.x + threadIdx.x;
+    // for(l=0; l < nHeight-)
+    int j = l / width;
+    int k = l - width*j;
 
     /* Apply blur on top part of image (10%) */
     // for(j=size; j < nHeight; j++)
@@ -86,7 +90,8 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height,
         }
     }
 
-    if(j<height-1 && k<width-1){
+    if(j>=1 && j<height-1 && k>=1 && k<width-1)
+    {
 
         float diff_r ;
         float diff_g ;
@@ -104,18 +109,128 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height,
             ) {
             atomicExch(end, 0);
         }
-
+        atomicAdd(sync, 1); // 
+        // while(*sync<1000);
+        __syncthreads();
+        
         pi[CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
         pi[CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
         pi[CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
+        
     }
-
-    
-
-    
-    
     
 }
+// _global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, 
+//                                     int width, int size, int * end, int threshold, int * sync)
+// {       
+
+//     int nHeight = height/10-size;
+//     int nWidth = width-size;
+
+//     int j = blockIdx.x * blockDim.x + threadIdx.x;
+//     int k = blockIdx.y * blockDim.y + threadIdx.y;
+
+//     /* Apply blur on top part of image (10%) */
+//     // for(j=size; j < nHeight; j++)
+
+//     atomicExch(end, 1); // assign 1 to shared variable 'end'
+
+//     if(j >= size && j < nHeight)
+//     {
+//         // for(k=size; k < nWidth; k++)
+//         if (k >= size && k < nWidth)
+//         {
+//             int stencil_j, stencil_k ;
+//             int t_r = 0 ;
+//             int t_g = 0 ;
+//             int t_b = 0 ;
+
+//             for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+//             {
+//                 for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+//                 {
+//                     t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+//                     t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+//                     t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+//                 }
+//             }
+
+//             newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+//             newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+//             newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+//         }
+//     }
+
+//     /* Apply blur on the bottom part of the image (10%) */
+//     // for(j=height*0.9+size; j<height-size; j++)
+//     if(j >= height*0.9+size && j < height-size)
+//     {
+//         // for(k=size; k<width-size; k++)
+//         if(k >= size && k < nWidth)
+//         {
+//             int stencil_j, stencil_k ;
+//             int t_r = 0 ;
+//             int t_g = 0 ;
+//             int t_b = 0 ;
+
+//             for ( stencil_j = -size ; stencil_j <= size ; stencil_j++ )
+//             {
+//                 for ( stencil_k = -size ; stencil_k <= size ; stencil_k++ )
+//                 {
+//                     t_r += pi[CONV(j+stencil_j,k+stencil_k,width)].r ;
+//                     t_g += pi[CONV(j+stencil_j,k+stencil_k,width)].g ;
+//                     t_b += pi[CONV(j+stencil_j,k+stencil_k,width)].b ;
+//                 }
+//             }
+
+//             newP[CONV(j,k,width)].r = t_r / ( (2*size+1)*(2*size+1) ) ;
+//             newP[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
+//             newP[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
+//         }
+//     }
+
+//     /* Copy the middle part of the image */
+//     // for(j=height/10-size; j<height*0.9+size; j++)
+//     if (j >= height/10-size && j < height*0.9+size)
+//     {
+//         // for(k=size; k<width-size; k++)
+//         if (k >= size && k < width-size)
+//         {
+//             newP[CONV(j,k,width)].r = pi[CONV(j,k,width)].r ; 
+//             newP[CONV(j,k,width)].g = pi[CONV(j,k,width)].g ; 
+//             newP[CONV(j,k,width)].b = pi[CONV(j,k,width)].b ; 
+//         }
+//     }
+
+//     if(j>=1 && j<height-1 && k>=1 && k<width-1){
+
+//         float diff_r ;
+//         float diff_g ;
+//         float diff_b ;
+
+//         diff_r = (newP[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
+//         diff_g = (newP[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
+//         diff_b = (newP[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
+
+//         if ( diff_r > threshold || -diff_r > threshold 
+//                 ||
+//                     diff_g > threshold || -diff_g > threshold
+//                     ||
+//                     diff_b > threshold || -diff_b > threshold
+//             ) {
+//             atomicExch(end, 0);
+//         }
+//         atomicAdd(sync, 1); // 
+//         while(*sync<23);
+        
+//         pi[CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
+//         pi[CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
+//         pi[CONV(j  ,k  ,width)].b = newP[CONV(j  ,k  ,width)].b ;
+        
+//     }
+    
+// }
+
 
 
 

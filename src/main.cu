@@ -169,14 +169,23 @@ int main( int argc, char ** argv )
         // copy pixels to device
         cudaMemcpy(dPi, p[i], N * sizeof( pixel ), cudaMemcpyHostToDevice);
 
+        int sync = 0;
+        int* dSync;
+
+        cudaMalloc((int**)&dSync, sizeof( int ));
         // Perform at least one blur iteration
         do
         {
-            dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
-            dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size, end_d, threshold);
+            sync=0;
+            cudaMemcpy(dSync, &sync, sizeof(int), cudaMemcpyHostToDevice);
 
-            // cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+            // dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+            // dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+            dim3 threadsPerBlock(2048);
+            dim3 numBlocks(height*width/2048 + 1);
+            compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size, end_d, threshold, dSync);
+
+            cudaMemcpy(p[i], dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
             
             cudaMemcpy(&end, end_d, sizeof(int), cudaMemcpyDeviceToHost);
             printf("On iteration %d of image %d the value of end is: %d\n", n_iter, i, end);
@@ -185,8 +194,9 @@ int main( int argc, char ** argv )
         }
         while ( threshold > 0 && !end ) ;
 
+
         // copy pixels back to ram
-        cudaMemcpy(p[i], dPi, N * sizeof(pixel), cudaMemcpyDeviceToHost);
+        // cudaMemcpy(p[i], dPi, N * sizeof(pixel), cudaMemcpyDeviceToHost);
 
     }
     #if LOG_FILTERS
@@ -240,7 +250,7 @@ int main( int argc, char ** argv )
         // free (sobel) ;
 
         /* (CPU ver.) Apply sobel filter on pixels */
-        apply_sobel_filter(width, height, pi);
+        // apply_sobel_filter(width, height, pi);
 
     }
     #if LOG_FILTERS
