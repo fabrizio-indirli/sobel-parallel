@@ -670,11 +670,13 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* 
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int k = blockIdx.y * blockDim.y + threadIdx.y;
 
-    atomicExch(end, 1);
+    
     // int j, k;
     /* Apply blur on top part of image (10%) */
     // for(j=size; j < nHeight; j++)
     do{
+        atomicExch(end, 1);
+
         if(j >= size && j < nHeight)
         {
             // for(k=size; k < nWidth; k++)
@@ -766,7 +768,7 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* 
                     atomicExch(end, 0);
                 }
 
-                grid.sync();
+                
 
                 pi[CONV(j  ,k  ,width)].r = newP[CONV(j  ,k  ,width)].r ;
                 pi[CONV(j  ,k  ,width)].g = newP[CONV(j  ,k  ,width)].g ;
@@ -774,7 +776,7 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int threshold, int* 
             }
         }
 
-    
+    grid.sync();
     } while ( threshold > 0 && !end ) ;
     // free (newP) ;
 

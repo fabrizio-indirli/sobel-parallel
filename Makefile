@@ -5,8 +5,8 @@ OBJ_DIR=obj
 
 CC=gcc
 NCC=nvcc
-CFLAGS=-O3 -I$(HEADER_DIR) -gencode arch=compute_61,code=sm_61
-NCCFLAGS=$(CFLAGS) -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -rdc=true -gencode arch=compute_61,code=sm_61
+CFLAGS=-O3 -I$(HEADER_DIR)
+NCCFLAGS=$(CFLAGS) -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -rdc=true -gencode=arch=compute_61,code=sm_61
 LDFLAGS=-lm
 
 SRC= dgif_lib.c \
