@@ -12,6 +12,8 @@
 #include <gif_lib.h>
 #include <cooperative_groups.h>
 
+using namespace cooperative_groups;
+
 #define SOBELF_DEBUG 0
 #define LOGGING 1
 
@@ -657,7 +659,7 @@ void apply_gray_line( animated_gif * image )
     }
 }
 
-__global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int width, int size)
+__global__ void compute_blur_filter(pixel* newP, pixel* pi, int* end, int height, int width, int size)
 {
     int nHeight = height/10-size;
     int nWidth = width-size;
@@ -665,7 +667,6 @@ __global__ void compute_blur_filter(pixel* newP, pixel* pi, int height, int widt
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int k = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int end;
     atomicExch(end, 1);
     // int j, k;
     /* Apply blur on top part of image (10%) */
@@ -806,9 +807,11 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
         /* GPU */
         pixel* dPi;
         pixel* dNewP;
+        int * end_d;
 
         cudaMalloc((void**)&dPi, N * sizeof( pixel ));
         cudaMalloc((void**)&dNewP, N * sizeof( pixel ));
+        cudaMalloc((int **)&end_d, 1*sizeof(int));
 
         /* this_grid.sync() */
         // int dN_iter;
@@ -818,7 +821,9 @@ apply_blur_filter( animated_gif * image, int size, int threshold )
             
         dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
         dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-        compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, height, width, size);
+        compute_blur_filter<<<numBlocks,threadsPerBlock>>>(dNewP, dPi, end, height, width, size);
+        
+        cudaMemcpy(end_d, &end, sizeof(int), cudaMemcpyHostToDevice);
 
         // cudaMemcpy(newP, dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
         cudaMemcpy(p[i], dNewP, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
