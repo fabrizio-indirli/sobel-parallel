@@ -1,2 +1,4 @@
 logs_plots/.ipynb_checkpoints/
 
+images/*
+.gitignore
