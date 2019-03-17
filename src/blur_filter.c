@@ -55,33 +55,7 @@ apply_blur_filter( int width, int height, pixel * pi, int size, int threshold ) 
                     new[CONV(j,k,width)].g = t_g / ( (2*size+1)*(2*size+1) ) ;
                     new[CONV(j,k,width)].b = t_b / ( (2*size+1)*(2*size+1) ) ;
 
-                    //*** Now, check the threshold. 
-                    float diff_r ;
-                    float diff_g ;
-                    float diff_b ;
-
-                    diff_r = (new[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
-                    diff_g = (new[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
-                    diff_b = (new[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
-
-                    // if(j > height/10-size && j < j_cond)
-                    //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
-
-                    if ( diff_r > threshold || -diff_r > threshold
-                            ||
-                            diff_g > threshold || -diff_g > threshold
-                            ||
-                            diff_b > threshold || -diff_b > threshold
-                    ) {
-                        end = 0 ; //*** FLAG (do while loop)
-                    }
-                    
-                    //*** update p
-                    pi[CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
-                    pi[CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
-                    pi[CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
-
-                } 
+                }
                 // Middle part
                 else 
                 {
@@ -91,6 +65,38 @@ apply_blur_filter( int width, int height, pixel * pi, int size, int threshold ) 
                 }
                 
             }
+        }
+        for(j=1; j<height-1; j++)
+        {
+            for(k=1; k<width-1; k++)
+            {
+            //*** Now, check the threshold. 
+                float diff_r ;
+                float diff_g ;
+                float diff_b ;
+
+                diff_r = (new[CONV(j  ,k  ,width)].r - pi[CONV(j  ,k  ,width)].r) ;
+                diff_g = (new[CONV(j  ,k  ,width)].g - pi[CONV(j  ,k  ,width)].g) ;
+                diff_b = (new[CONV(j  ,k  ,width)].b - pi[CONV(j  ,k  ,width)].b) ;
+
+                // if(j > height/10-size && j < j_cond)
+                //     printf("diffr: %f, diffg: %f, diffb: %f, \n", diff_r, diff_g, diff_b);
+
+                if ( diff_r > threshold || -diff_r > threshold
+                        ||
+                        diff_g > threshold || -diff_g > threshold
+                        ||
+                        diff_b > threshold || -diff_b > threshold
+                ) {
+                    end = 0 ; //*** FLAG (do while loop)
+                }
+                
+                //*** update p
+                pi[CONV(j  ,k  ,width)].r = new[CONV(j  ,k  ,width)].r ;
+                pi[CONV(j  ,k  ,width)].g = new[CONV(j  ,k  ,width)].g ;
+                pi[CONV(j  ,k  ,width)].b = new[CONV(j  ,k  ,width)].b ;
+
+            } 
         }
     } while ( threshold > 0 && !end ) ;
 
