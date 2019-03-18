@@ -35,7 +35,8 @@ OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/sobel_filter.o \
 	$(OBJ_DIR)/load_pixels.o \
 	$(OBJ_DIR)/blur_filter.o \
-	$(OBJ_DIR)/store_pixels.o
+	$(OBJ_DIR)/store_pixels.o \
+	$(OBJ_DIR)/helpers.o \
 
 all: $(OBJ_DIR) sobelf
 

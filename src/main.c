@@ -27,6 +27,7 @@
 #define MPI_DEBUG 1
 #define GDB_DEBUG 0
 
+
 #if LOGGING
     #define LOG_FILENAME "./logs_plots/plog_ser.csv"
     FILE *fOut;
@@ -39,6 +40,12 @@ int num_nodes, my_rank;
 
 // 0: no MPI; 1: MPI on subimgs;  2: MPI on pixels;  3: hybrid
 int mpi_mode;
+
+// minimum number of avg pixels to use MPI on pixels (parts of the image)
+#define MPI_PIXELS_THRESHOLD 1000
+
+// minimum number of avg pixels to use MPI on bug-images
+#define MPI_IMGS_THRESHOLD 1000
 
 // info on GIF file
 int num_imgs = 0;
@@ -131,6 +138,7 @@ int main( int argc, char ** argv )
     #else
         num_nodes = 1;
         my_rank = 0;
+        mpi_mode = 0;
     #endif
 
     
@@ -170,8 +178,24 @@ int main( int argc, char ** argv )
         printf("This GIF has %d sub-images\n", num_imgs);
 
         // get average size of subimages
-        int avg_size = avgSize(image->width, image->height)
+        long avg_size = avgSize(image->width, image->height, num_imgs);
+        printf("Average size of images is %ld pixels\n", avg_size);
 
+        mpi_mode = selectMPImode(num_nodes, num_imgs, avg_size, MPI_PIXELS_THRESHOLD, MPI_IMGS_THRESHOLD);
+        printf("Selected MPI mode %d\n", mpi_mode);
+
+    }
+
+    if(num_nodes>1){
+        // broadcast mpi_mode
+        MPI_Bcast(&mpi_mode, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    }
+
+    if(mpi_mode==0){
+        // if MPI is not being used, all the ranks except 0 can stop
+        MPI_Finalize();
+
+        if(my_rank > 0) return;
     }
 
     
@@ -369,7 +393,7 @@ int main( int argc, char ** argv )
 
 
     #ifdef MPI_VERSION
-        MPI_Finalize();
+        if(num_nodes > 1) MPI_Finalize();
     #endif
 
     if(my_rank > 0) return 0;
