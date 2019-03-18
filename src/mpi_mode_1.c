@@ -77,12 +77,9 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
 
     if(my_rank == 0){
         // work scheduling done by first node
-        printf("\nRank %d is here1", my_rank);
         pixel ** p ;
         p = image->p ;
         num_imgs = image->n_images;
-        printf("Rank %d is here1", my_rank);
-        printf("\nThis GIF has %d sub-images\n", num_imgs);
 
         int n_imgs_per_node[num_nodes];
 
