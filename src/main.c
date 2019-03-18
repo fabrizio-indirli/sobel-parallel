@@ -21,6 +21,7 @@
 #include "datastr.h"
 #include "helpers.h"
 #include "mpi_mode_1.h"
+#include "mpi_mode_2.h"
 
 #define SOBELF_DEBUG 0
 #define LOGGING 0
@@ -179,6 +180,7 @@ int main( int argc, char ** argv )
     switch(mpi_mode){
         case 0: break; //TODO
         case 1: useMPIonImgs(mpi_pixel_type, num_nodes, image, my_rank); break;
+        case 2: useMPIonPixels(mpi_pixel_type, num_nodes, image, my_rank); break;
         default: break;
     }
 

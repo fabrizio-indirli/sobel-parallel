@@ -6,4 +6,12 @@
 #include <stdbool.h>
 #include <mpi.h>
 #include <stddef.h>
+
 #include "helpers.h"
+#include "grey_filter.h"
+#include "blur_filter.h"
+#include "sobel_filter.h"
+
+
+void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,  
+                    animated_gif * image, int my_rank);
