@@ -1,19 +1,23 @@
 #include "mpi_mode_1.h"
 
+#define IN_DEBUG 0
+
+int rank;
+
 void apply_all_filters_mode1(int * ws, int * hs, pixel ** p, int num_subimgs, 
                         MPI_Request * reqs, MPI_Datatype mpi_pixel_type){
     int i, width, height;
     for ( i = 0 ; i < num_subimgs ; i++ )
     {
-        #if MPI_DEBUG
+        #if IN_DEBUG
             printf("\nProcess %d is applying filters on image %d of %d\n",
-            my_rank, i, num_subimgs);
+            rank, i, num_subimgs);
         #endif
         pixel * pi = p[i];
         width = ws[i];
         height = hs[i];
 
-        MPI_Wait(&reqs[i], MPI_STATUS_IGNORE);
+        //MPI_Wait(&reqs[i], MPI_STATUS_IGNORE);
 
         /*Apply grey filter: convert the pixels into grayscale */
         apply_gray_filter_omp(width, height, pi);
@@ -25,7 +29,8 @@ void apply_all_filters_mode1(int * ws, int * hs, pixel ** p, int num_subimgs,
         apply_sobel_filter_omp(width, height, pi);
 
         /* Send back to rank 0 */
-        MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &(reqs[i]));
+        // MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &(reqs[i]));
+        MPI_Send(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD);
 
     }
 }
@@ -35,9 +40,9 @@ void apply_all_filters0_mode1(int * ws, int * hs, pixel ** p, int num_subimgs){
     int i, width, height;
     for ( i = 0 ; i < num_subimgs ; i++ )
     {
-        #if MPI_DEBUG
+        #if IN_DEBUG
             printf("\nProcess %d is applying filters on image %d of %d\n",
-            my_rank, i, num_subimgs);
+            rank, i, num_subimgs);
         #endif
         pixel * pi = p[i];
         width = ws[i];
@@ -60,6 +65,7 @@ void apply_all_filters0_mode1(int * ws, int * hs, pixel ** p, int num_subimgs){
 void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes, 
                     animated_gif * image, int my_rank)
 {   
+    rank = my_rank;
     struct timeval t0, t1, t2;
 
     /* FILTER Timer start */
@@ -68,9 +74,6 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
     /***** Start of parallelized version of filters *****/
     int i, j;
     int n_imgs_this_node;
-
-    #define WID(j) dims[j]
-    #define HEI(j) dims[n_imgs_this_node + j]
 
 
     int num_imgs = 0;
@@ -107,7 +110,7 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
         }
 
 
-        #if MPI_DEBUG
+        #if IN_DEBUG
             printf("\nThe %d ranks will process the following number of sub-imgs each: ", num_nodes);
             printVector(n_imgs_per_node, num_nodes);
         #endif
@@ -116,6 +119,9 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
 
         #define W0 image->width[n_prev_imgs]
         #define H0 image->height[n_prev_imgs]
+
+        // MPI_Request ** reqsPerNode = (MPI_Request **)malloc(num_nodes*sizeof(MPI_Request *));
+
         
 
         for(i=1; i<num_nodes; i++){
@@ -138,11 +144,10 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
 
             //send pixels to other processes
             for(j=0; j < n_imgs_per_node[i]; j++){ 
-                // MPI_Isend(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD, &reqs[j]);
-                MPI_Send(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD);
+                MPI_Isend(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD, &reqs[j]);
                 n_prev_imgs++;
 
-                #if MPI_DEBUG
+                #if IN_DEBUG
                     printf("\nRank 0 has sent picture %d of %d to rank %d", j, n_imgs_per_node[i], i);
                 #endif
             }
@@ -169,6 +174,9 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
             for(j=0; j < n_imgs_per_node[i]; j++){
                 #define REC_INDEX (n_prev_imgs - n_imgs_per_node[0])
                 MPI_Irecv(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,3, MPI_COMM_WORLD, &reqs[REC_INDEX]);
+                #if IN_DEBUG
+                    printf("Rank 0 has received img %d from node %d\n", j, i);
+                #endif
                 n_prev_imgs++;
             }
         }
@@ -179,18 +187,30 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
     } else {
         // NODES WITH RANK >= 1
 
+            #define WID(j) dims[j]
+            #define HEI(j) dims[n_imgs_this_node + j]
+
+
             // nodes with rank >= 1 receive the number of images they have to process
             MPI_Recv(&n_imgs_this_node, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            #if IN_DEBUG
+                printf("Rank %d has received num of imgs\n", my_rank);
+            #endif
 
             if(n_imgs_this_node > 0){
 
                 // nodes with rank >= 1 receive the dimensions vector and the pixels matrix
                 int dims[2 * n_imgs_this_node];
                 MPI_Recv(dims, 2 * n_imgs_this_node, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                #if IN_DEBUG
+                    printf("Rank %d has received dims vector\n", my_rank);
+                #endif
                 int total_num_pixels = 0;
                 for(j=0; j < n_imgs_this_node; j++){
                     total_num_pixels += dims[j] * dims[n_imgs_this_node + j]; 
                 }
+
+
                 // allocate array of pointers to pixels' vectors
                 pixel ** p_rec = (pixel **)malloc(sizeof(pixel *) * total_num_pixels);
 
@@ -206,8 +226,10 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
                 for(i=0; i<n_imgs_this_node; i++){
                     // MPI_Irecv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, &reqs[i]);
                     MPI_Recv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
                 }
+                #if IN_DEBUG
+                    printf("Rank %d has received all iamges\n", my_rank);
+                #endif
                 
                 // other node computes filters on its images and send them back to rank 0
                 apply_all_filters_mode1(dims, &(dims[n_imgs_this_node]), p_rec, n_imgs_this_node, reqs, mpi_pixel_type);
