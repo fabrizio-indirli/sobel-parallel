@@ -20,7 +20,8 @@ SRC= dgif_lib.c \
 	load_pixels.c \
 	blur_filter.c \
 	store_pixels.c \
-	helpers.c
+	helpers.c \
+	mpi_mode_1.c
 
 OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/egif_lib.o \
@@ -37,6 +38,7 @@ OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/blur_filter.o \
 	$(OBJ_DIR)/store_pixels.o \
 	$(OBJ_DIR)/helpers.o \
+	$(OBJ_DIR)/mpi_mode_1.o \
 
 all: $(OBJ_DIR) sobelf
 
