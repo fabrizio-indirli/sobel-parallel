@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/brizio/.openmpi/include/"
+                "/home/brizio/.openmpi/include/",
+                
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
