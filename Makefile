@@ -19,7 +19,8 @@ SRC= dgif_lib.c \
 	sobel_filter.c \
 	load_pixels.c \
 	blur_filter.c \
-	store_pixels.c
+	store_pixels.c \
+	helpers.c
 
 OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/egif_lib.o \

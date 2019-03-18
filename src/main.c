@@ -19,6 +19,7 @@
 #include "blur_filter.h"
 #include "sobel_filter.h"
 #include "datastr.h"
+#include "helpers.h"
 
 #define SOBELF_DEBUG 0
 #define LOGGING 0
@@ -27,24 +28,22 @@
 #define GDB_DEBUG 0
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/plog_ser.csv"
+    #define LOG_FILENAME "./logs_plots/plog_ser.csv"
     FILE *fOut;
-
-    void writeNumToLog(double n){
-        fprintf(fOut, "%lf\n", n);
-    }
-
-    void appendNumToRow(double n){
-        fprintf(fOut, "%lf,",n);
-    }
-
-    void newRow(){
-        fprintf(fOut, "\n");
-    }
-
 #endif
 
+int i, j;
+
+// MPI data
 int num_nodes, my_rank;
+
+// 0: no MPI; 1: MPI on subimgs;  2: MPI on pixels;  3: hybrid
+int mpi_mode;
+
+// info on GIF file
+int num_imgs = 0;
+pixel ** p ;
+
 
 #ifdef MPI_VERSION
     MPI_Status comm_status;
@@ -82,25 +81,6 @@ void apply_all_filters(int * ws, int * hs, pixel ** p, int num_subimgs,
 
 
 
-void printVector(int * v, int n){
-    int i;
-    printf("[");
-    for(i=0; i<n; i++){
-        printf(" %d ", v[i]);
-    }
-    printf("]\n");
-}
-
-void printHexVector(pixel ** v, int n){
-    int i;
-    printf("[");
-    for(i=0; i<n; i++){
-        printf(" %#x ", v[i]);
-    }
-    printf("]\n");
-}
-
-
 int main( int argc, char ** argv )
 {
 
@@ -123,7 +103,9 @@ int main( int argc, char ** argv )
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-        printf("Rank %d has pid=%d\n", my_rank, getpid());
+        #if MPI_DEBUG
+            printf("Rank %d has pid=%d\n", my_rank, getpid());
+        #endif
     
         #if GDB_DEBUG
             if(my_rank==0) {
@@ -157,7 +139,7 @@ int main( int argc, char ** argv )
         fOut = fopen(FILE_NAME,"a");
         if(ftell(fOut)==0) //file is empty
             fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
-        newRow();
+        newRow(fOut);
     #endif
 
     if(my_rank == 0){
@@ -177,11 +159,18 @@ int main( int argc, char ** argv )
         printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
                 input_filename, image->n_images, duration ) ;
         #if LOGGING
-            appendNumToRow(image->n_images);
-            appendNumToRow(image->width[0]);
-            appendNumToRow(image->height[0]);
-            appendNumToRow(duration);
+            appendNumToRow(image->n_images, fOut);
+            appendNumToRow(image->width[0], fOut);
+            appendNumToRow(image->height[0], fOut);
+            appendNumToRow(duration, fOut);
         #endif
+
+        p = image->p ;
+        num_imgs = image->n_images;
+        printf("This GIF has %d sub-images\n", num_imgs);
+
+        // get average size of subimages
+        int avg_size = avgSize(image->width, image->height)
 
     }
 
@@ -190,18 +179,8 @@ int main( int argc, char ** argv )
     gettimeofday(&t0, NULL);
 
     /***** Start of parallelized version of filters *****/
-    int i, j;
-   
-    int num_imgs = 0;
-    pixel ** p ;
 
-    if(my_rank == 0){
-        // work scheduling done by first node
-        p = image->p ;
-        num_imgs = image->n_images;
-        printf("This GIF has %d sub-images\n", num_imgs);
 
-    }
 
     // send num of imgs to all the nodes
     MPI_Bcast(&num_imgs, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -401,7 +380,7 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
     printf( "All filters done in %lf s on %d sub-images\n", duration, num_imgs) ;
     #if LOGGING
-        appendNumToRow(duration);
+        appendNumToRow(duration, fOut);
     #endif
 
     #if EXPORT
@@ -417,7 +396,7 @@ int main( int argc, char ** argv )
         duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
         printf( "Export done in %lf s in file %s\n\n", duration, output_filename ) ;
         #if LOGGING
-            appendNumToRow(duration);
+            appendNumToRow(duration, fOut);
         #endif
 
         /*Close perfomance log file*/
