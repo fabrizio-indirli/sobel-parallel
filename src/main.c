@@ -128,7 +128,7 @@ int main( int argc, char ** argv )
         #pragma omp parallel default(none) private(i,width,height) shared(p,image)
         {
             int rank = omp_get_thread_num();
-            #pragma omp for schedule(static,1)
+            #pragma omp for schedule(dynamic)
             for(i = 0 ; i < image->n_images; i++)
             {
                 printf("[BLUR] p[%d] from thread #%d\n", i, rank);
@@ -185,7 +185,7 @@ int main( int argc, char ** argv )
         #pragma omp parallel default(none) private(i,width,height) shared(p,image)
         {
             int rank = omp_get_thread_num();
-            #pragma omp for schedule(static,1)
+            #pragma omp for schedule(dynamic)
             for(i = 0 ; i < image->n_images; i++)
             {
                 printf("p[%d] from thread #%d\n", i, rank);
@@ -223,7 +223,7 @@ int main( int argc, char ** argv )
         #pragma omp parallel default(none) private(i,width,height) shared(p,image)
         {
             int rank = omp_get_thread_num();
-            #pragma omp for schedule(static,1)
+            #pragma omp for schedule(dynamic)
             for(i = 0 ; i < image->n_images; i++)
             {
                 printf("p[%d] from thread #%d\n", i, rank);
