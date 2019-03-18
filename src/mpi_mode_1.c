@@ -60,7 +60,6 @@ void apply_all_filters0_mode1(int * ws, int * hs, pixel ** p, int num_subimgs){
 void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes, 
                     animated_gif * image, int my_rank)
 {   
-    
     struct timeval t0, t1, t2;
 
     /* FILTER Timer start */
@@ -84,6 +83,8 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
 
         int n_imgs_per_node[num_nodes];
 
+        
+
         int i;
         // compute num of imgs that each node has to process
         if(num_nodes > num_imgs){
@@ -95,7 +96,7 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
             }
         } else {
             // otherwise, each rank processes (num_imgs / num_nodes) images.
-            // if ther's a rest to this division, it's added to the number of
+            // if there's a rest to this division, it's added to the number of
             // images processed by the first ranks.
             #define NPN (num_imgs/num_nodes) //integer division
             int rest = num_imgs % num_nodes;
@@ -115,6 +116,7 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
 
         #define W0 image->width[n_prev_imgs]
         #define H0 image->height[n_prev_imgs]
+        
 
         for(i=1; i<num_nodes; i++){
             
@@ -132,11 +134,12 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
             MPI_Send(dims, 2*n_imgs_per_node[i], MPI_INT, i, 1, MPI_COMM_WORLD);
 
             //requests vector
-            MPI_Request reqs[n_imgs_this_node];
+            MPI_Request reqs[n_imgs_per_node[i]];
 
             //send pixels to other processes
             for(j=0; j < n_imgs_per_node[i]; j++){ 
-                MPI_Isend(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD, &reqs[j]);
+                // MPI_Isend(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD, &reqs[j]);
+                MPI_Send(p[n_prev_imgs], W0*H0, mpi_pixel_type, i,2, MPI_COMM_WORLD);
                 n_prev_imgs++;
 
                 #if MPI_DEBUG
@@ -201,7 +204,9 @@ void useMPIonImgs(MPI_Datatype mpi_pixel_type, int num_nodes,
 
                 //receive images to process
                 for(i=0; i<n_imgs_this_node; i++){
-                    MPI_Irecv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, &reqs[i]);
+                    // MPI_Irecv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, &reqs[i]);
+                    MPI_Recv((p_rec[i]), WID(i)*HEI(i), mpi_pixel_type, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
                 }
                 
                 // other node computes filters on its images and send them back to rank 0

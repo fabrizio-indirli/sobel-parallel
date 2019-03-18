@@ -12,5 +12,5 @@ for i in $INPUT_DIR/*gif ; do
     DEST=$OUTPUT_DIR/`basename $i .gif`-sobel.gif
     echo "Running test on $i -> $DEST"
 
-    ./sobelf $i $DEST
+    mpirun -np 2 ./sobelf $i $DEST
 done

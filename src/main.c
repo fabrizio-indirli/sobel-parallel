@@ -153,13 +153,17 @@ int main( int argc, char ** argv )
 
         mpi_mode = selectMPImode(num_nodes, num_imgs, avg_size, MPI_PIXELS_THRESHOLD, MPI_IMGS_THRESHOLD);
         printf("Selected MPI mode %d\n", mpi_mode);
+        
 
     }
+
+    
 
     if(num_nodes>1){
         // broadcast mpi_mode
         MPI_Bcast(&mpi_mode, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
+
 
     if(mpi_mode==0){
         // if MPI is not being used, all the ranks except 0 can stop
@@ -172,10 +176,12 @@ int main( int argc, char ** argv )
     /* FILTER Timer start */
     gettimeofday(&t0, NULL);
 
+    
+
     /***** Start of parallelized version of filters *****/
 
     switch(mpi_mode){
-        case 0: compute_without_MPI(num_nodes, image, my_rank); break; //TODO
+        case 0: compute_without_MPI(num_nodes, image, my_rank); break; 
         case 1: useMPIonImgs(mpi_pixel_type, num_nodes, image, my_rank); break;
         case 2: useMPIonPixels(mpi_pixel_type, num_nodes, image, my_rank); break;
         default: break;
