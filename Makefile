@@ -22,7 +22,8 @@ SRC= dgif_lib.c \
 	store_pixels.c \
 	helpers.c \
 	mpi_mode_1.c \
-	mpi_mode_2.c
+	mpi_mode_2.c \
+	mpi_mode_3.c
 
 OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/egif_lib.o \
@@ -41,6 +42,7 @@ OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/helpers.o \
 	$(OBJ_DIR)/mpi_mode_1.o \
 	$(OBJ_DIR)/mpi_mode_2.o \
+	$(OBJ_DIR)/mpi_mode_3.o \
 
 all: $(OBJ_DIR) sobelf
 

@@ -22,6 +22,7 @@
 #include "helpers.h"
 #include "mpi_mode_1.h"
 #include "mpi_mode_2.h"
+#include "mpi_mode_3.h"
 
 #define SOBELF_DEBUG 0
 #define LOGGING 0
