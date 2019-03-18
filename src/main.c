@@ -33,7 +33,6 @@
 
 #if LOGGING
     #define LOG_FILENAME "./logs_plots/plog_ser.csv"
-    FILE *fOut;
 #endif
 
 int i, j;
@@ -118,10 +117,7 @@ int main( int argc, char ** argv )
     
     /*Open perfomance log file for debug*/
     #if LOGGING
-        fOut = fopen(FILE_NAME,"a");
-        if(ftell(fOut)==0) //file is empty
-            fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
-        newRow(fOut);
+        openLogFile(LOG_FILENAME);
     #endif
 
     if(my_rank == 0){
@@ -179,7 +175,7 @@ int main( int argc, char ** argv )
     /***** Start of parallelized version of filters *****/
 
     switch(mpi_mode){
-        case 0: break; //TODO
+        case 0: compute_without_MPI(num_nodes, image, my_rank); break; //TODO
         case 1: useMPIonImgs(mpi_pixel_type, num_nodes, image, my_rank); break;
         case 2: useMPIonPixels(mpi_pixel_type, num_nodes, image, my_rank); break;
         default: break;
@@ -222,7 +218,7 @@ int main( int argc, char ** argv )
 
         /*Close perfomance log file*/
         #if LOGGING
-            fclose(fOut);
+            closeLogFile();
         #endif
     #endif
 
