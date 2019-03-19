@@ -26,7 +26,7 @@ void apply_all_filters_mode1(int * ws, int * hs, pixel ** p, int num_subimgs,
         apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
 
         /* Apply sobel filter on pixels */
-        apply_sobel_filter_omp(width, height, pi);
+        sobel_filter_auto(width, height, pi);
 
         /* Send back to rank 0 */
         // MPI_Isend(pi, width*height, mpi_pixel_type, 0, 3, MPI_COMM_WORLD, &(reqs[i]));

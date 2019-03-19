@@ -1,4 +1,5 @@
 #include "sobel_filter.h"
+#include <stdio.h>
 
 #define CONV(l,c,nb_c) \
     (l)*(nb_c)+(c)
@@ -270,12 +271,13 @@ void apply_sobel_filter_part(int width, int height, pixel * pi, int startheight,
 void sobel_filter_auto(int width, int height, pixel * pi){
     int nDevices = 0;
     cudaGetDeviceCount(&nDevices);
+    printf("Num of GPUs: %d\n", nDevices);
 
     int j, k;
 
     if(nDevices > 0){
         // use CUDA if GPU is available
-
+        printf("Computing SOBEL using CUDA\n");
         /* CUDA ver. */
         int N = width*height;
 

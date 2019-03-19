@@ -17,7 +17,6 @@
 #include "store_pixels.h"
 #include "grey_filter.h"
 #include "blur_filter.h"
-#include "sobel_filter.h"
 #include "datastr.h"
 #include "helpers.h"
 #include "mpi_mode_0.h"

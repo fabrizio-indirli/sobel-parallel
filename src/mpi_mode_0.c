@@ -75,7 +75,7 @@ void compute_without_MPI(int num_nodes, animated_gif * image, int my_rank)
             apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
 
             /* Apply sobel filter on pixels */
-            apply_sobel_filter_omp(width, height, pi);
+            sobel_filter_auto(width, height, pi);
         }
     }
 
