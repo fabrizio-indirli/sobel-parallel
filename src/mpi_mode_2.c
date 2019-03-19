@@ -1,5 +1,7 @@
 #include "mpi_mode_2.h"
 
+#define MIN_PIXELS_THRESHOLD 10000
+
 void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,  
                     animated_gif * image, int my_rank)
 {
@@ -42,6 +44,46 @@ void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,
     #if MPI_DEBUG
         printf("Rank %d:  dims broadcast\n", my_rank);
     #endif
+
+    int avg_size = avgSize(dims, &dims[num_imgs], num_imgs);
+    
+    #define MAX_RANK (avg_size/MIN_PIXELS_THRESHOLD)
+
+    MPI_Group new_group;
+    MPI_Comm_group(MPI_COMM_WORLD, &new_group);
+    MPI_Comm newworld;
+    MPI_Comm_create(MPI_COMM_WORLD, new_group, &newworld);
+
+    if(num_nodes > MAX_RANK){
+        // too many ranks
+        if(my_rank == 0)
+            printf("Too many nodes: %d of them won't be used\n", (num_nodes - MAX_RANK));
+
+        // Obtain the group of processes in the world communicator
+        MPI_Group world_group;
+        MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+
+        // exclude ranks in excess
+        int ranges[1][3];
+        ranges[0][0] = MAX_RANK;
+        ranges[0][1] = num_nodes-1;
+        ranges[0][2] = 1;
+        MPI_Group_range_excl(world_group, 1, ranges, &new_group);
+
+        // Create a new communicator with less ranks
+        MPI_Comm_create(MPI_COMM_WORLD, new_group, &newworld);
+
+        if (newworld == MPI_COMM_NULL)
+        {
+            // ranks in excess terminate
+            MPI_Finalize();
+            exit(0);
+        }
+
+        // update number of ranks
+        MPI_Comm_size(newworld, &num_nodes);
+        MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    }
 
     #define WIDTH(j) dims[j]
     #define HEIGHT(j) dims[j + num_imgs]
@@ -110,7 +152,7 @@ void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,
 
     // Broadcast all images
     for(i=0; i < num_imgs; i++){
-        MPI_Ibcast(p[i], WIDTH(i)*HEIGHT(i), mpi_pixel_type, 0, MPI_COMM_WORLD, &reqs[i]);
+        MPI_Ibcast(p[i], WIDTH(i)*HEIGHT(i), mpi_pixel_type, 0, newworld, &reqs[i]);
         // MPI_Bcast(p[i], WIDTH(i)*HEIGHT(i), mpi_pixel_type, 0, MPI_COMM_WORLD);
     }
 
@@ -139,7 +181,7 @@ void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,
         apply_blur_filter_part( width, height, pj, 5, 20, my_start_heights[j], MY_FINAL_HEIGHT(j) ) ;
 
         // /* Apply sobel filter on pixels */
-        apply_sobel_filter_part(width, height, pj, my_start_heights[j], MY_FINAL_HEIGHT(j));
+        sobel_filter_part_auto(width, height, pj, my_start_heights[j], MY_FINAL_HEIGHT(j));
 
 
 
@@ -148,20 +190,7 @@ void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,
             printf("Rank %d: preparing to gather for img %d which has computed %d lines\n", my_rank, j, PART_HEIGHT(j, my_rank));
         #endif
         MPI_Igatherv(&pj[START_PIXEL(j, my_rank)], width * PART_HEIGHT(j, my_rank), mpi_pixel_type, pj, 
-                    partsSizes[j], displs[j], mpi_pixel_type, 0, MPI_COMM_WORLD, reqs_final[j]);
-
-        // if(my_rank == 0) {printf("Displacements for image %d: ", j); printVector(displs[j], num_nodes);}
-
-        // MPI_Gatherv(&pj[START_PIXEL(j, my_rank)], width * PART_HEIGHT(j, my_rank), mpi_pixel_type, pj, 
-        //             partsSizes[j], displs[j], mpi_pixel_type, 0, MPI_COMM_WORLD);
-        
-        // if(my_rank > 0) MPI_Send(&pj[START_PIXEL(j, my_rank)] , width * PART_HEIGHT(j, my_rank),
-        //                             mpi_pixel_type, 0, 6, MPI_COMM_WORLD);
-        // else {
-        //     for(i=1; i < num_nodes; i++){
-        //     MPI_Recv(&pj[START_PIXEL(j, my_rank)], width * PART_HEIGHT(j, i), mpi_pixel_type, i, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        //     }
-        // }
+                    partsSizes[j], displs[j], mpi_pixel_type, 0, newworld, reqs_final[j]);
 
         
     }

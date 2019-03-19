@@ -20,6 +20,8 @@ extern void apply_sobel_filter_part(int width, int height, pixel * pi, int start
 
 extern void sobel_filter_auto(int width, int height, pixel * pi);
 
+extern void sobel_filter_part_auto(int width, int height, pixel * pi, int startheight, int finalheight);
+
 #ifdef __cplusplus
 extern "C"{
 #endif 
