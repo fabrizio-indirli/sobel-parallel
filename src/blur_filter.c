@@ -1,6 +1,5 @@
 #include "blur_filter.h"
 
-
 #define CONV(l,c,nb_c) \
     (l)*(nb_c)+(c)
 
@@ -17,6 +16,7 @@ apply_blur_filter( int width, int height, pixel * pi, int size, int threshold ) 
    /* Allocate array of new pixels */
     new = (pixel *)malloc(width * height * sizeof( pixel ) ) ;
 
+
     /* Perform at least one blur iteration */
     do
     {
@@ -24,7 +24,8 @@ apply_blur_filter( int width, int height, pixel * pi, int size, int threshold ) 
         n_iter++ ;
         #pragma omp parallel default(none) private(j,k) shared(size,threshold,width,height,pi,new,end)
         {
-            #pragma omp for collapse(2) schedule(dynamic, width) 
+            int chunk = width*height / omp_get_num_threads();
+            #pragma omp for collapse(2) schedule(dynamic,width) 
             for(j=size; j<height-size; j++)
             {
                 for(k=size; k<width-size; k++)

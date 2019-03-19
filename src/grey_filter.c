@@ -14,6 +14,7 @@ apply_gray_filter( int width, int height, pixel * pi )
     #endif */
     #pragma omp parallel default(none) private(j) shared(pi,width,height)
     {
+        int chunk = width*height / omp_get_num_threads();
         #pragma omp for schedule(dynamic,width)
         for ( j = 0 ; j < width * height ; j++ )
         {

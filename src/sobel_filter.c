@@ -13,8 +13,7 @@ void apply_sobel_filter(int width, int height, pixel * pi){
 
     #pragma omp parallel default(none) private(j,k) shared(width,height,pi,sobel) //***
     {
-        // `dynamic` can be a better choice, since there is an if statement that might invoke imbalance for the iteration.
-        // Actually nope... static one is faster. 
+        int chunk = width*height / omp_get_num_threads();
         #pragma omp for collapse(2) schedule(dynamic,width) 
         for(j=1; j<height-1; j++)
         {
