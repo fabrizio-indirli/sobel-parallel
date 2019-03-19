@@ -1,10 +1,16 @@
 SRC_DIR=src
-HEADER_DIR=include
+HEADER_DIR=./include
 OBJ_DIR=obj
+MPI_INSTALL=/users/profs/2017/francois.trahay/soft/install/openmpi
+MPI_INCS=$(MPI_INSTALL)/include
+MPI_LIB=$(MPI_INSTALL)/lib64
 
 CC=mpicc
-CFLAGS=-O3 -I$(HEADER_DIR) -fopenmp
-LDFLAGS=-lm
+NCC=nvcc
+CFLAGS=-O3 -I$(HEADER_DIR)
+NCCFLAGS=-I$(MPI_INCS) -I$(HEADER_DIR)
+LDFLAGS=-lm -L$(MPI_LIB)
+
 
 SRC= dgif_lib.c \
 	egif_lib.c \
@@ -12,19 +18,19 @@ SRC= dgif_lib.c \
 	gif_font.c \
 	gif_hash.c \
 	gifalloc.c \
-	main.c \
+	main.cu \
 	openbsd-reallocarray.c \
 	quantize.c \
 	grey_filter.c \
-	sobel_filter.c \
+	sobel_filter.cu \
 	load_pixels.c \
 	blur_filter.c \
 	store_pixels.c \
 	helpers.c \
-	mpi_mode_1.c \
-	mpi_mode_2.c \
-	mpi_mode_3.c \
-	mpi_mode_0.c
+	mpi_mode_1.cu \
+	mpi_mode_2.cu \
+	mpi_mode_3.cu \
+	mpi_mode_0.cu
 
 OBJ= $(OBJ_DIR)/dgif_lib.o \
 	$(OBJ_DIR)/egif_lib.o \
@@ -54,8 +60,11 @@ $(OBJ_DIR):
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cu
+	$(NCC) $(NCCFLAGS) $(LDFLAGS) -c -o $@ $^
+
 sobelf:$(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(NCC) $(NCCFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -f sobelf $(OBJ)

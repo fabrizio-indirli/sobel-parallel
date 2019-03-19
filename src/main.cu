@@ -20,6 +20,7 @@
 #include "sobel_filter.h"
 #include "datastr.h"
 #include "helpers.h"
+#include "mpi_mode_0.h"
 #include "mpi_mode_1.h"
 #include "mpi_mode_2.h"
 #include "mpi_mode_3.h"
@@ -112,7 +113,7 @@ int main( int argc, char ** argv )
     #endif
 
     #if MPI_DEBUG
-        printf("Rank %d has pid=%d\n", my_rank, getpid());
+        //printf("Rank %d has pid=%d\n", my_rank, getpid());
     #endif
     
     /*Open perfomance log file for debug*/
