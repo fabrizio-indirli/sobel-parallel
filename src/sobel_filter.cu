@@ -318,8 +318,48 @@ void apply_sobel_filter_part(int width, int height, pixel * pi, int startheight,
 
 }
 
+// applies sobel filter using CUDA on entire picture
+void sobel_filter_cuda(int width, int height, pixel * pi){
+    int j, k;
 
+     #if SOBEL_DBG
+        printf("Computing SOBEL using CUDA\n");
+    #endif
 
+    /* CUDA ver. */
+    int N = width*height;
+
+    pixel* sobel;
+
+    sobel = (pixel *)malloc(N * sizeof( pixel ) ) ; // new image
+
+    /* GPU */
+    pixel* dPi;
+    pixel* dSobel;
+
+    cudaMalloc((void**)&dPi, N * sizeof( pixel ));
+    cudaMalloc((void**)&dSobel, N * sizeof( pixel ));
+
+    cudaMemcpy(dPi, pi, N * sizeof( pixel ), cudaMemcpyHostToDevice);
+
+    dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
+    dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
+    kernel_sobel_filter<<<numBlocks,threadsPerBlock>>>(dSobel, dPi, height, width);
+
+    cudaMemcpy(sobel, dSobel, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
+
+    for(j=1; j<height-1; j++)
+    {
+        for(k=1; k<width-1; k++)
+        {
+            pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
+            pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
+            pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
+        }
+    }
+
+    free (sobel) ;
+}
 
 
 // applies sobel filter using either CUDA or OpenMP (on single picture)
@@ -337,44 +377,8 @@ void sobel_filter_auto(int width, int height, pixel * pi){
 
     if(nDevices > 0 && thread_rank < 2){
         // use CUDA if GPU is available
-
-        #if SOBEL_DBG
-            printf("Computing SOBEL using CUDA\n");
-        #endif
-
-        /* CUDA ver. */
-        int N = width*height;
-
-        pixel* sobel;
-
-        sobel = (pixel *)malloc(N * sizeof( pixel ) ) ; // new image
-
-        /* GPU */
-        pixel* dPi;
-        pixel* dSobel;
- 
-        cudaMalloc((void**)&dPi, N * sizeof( pixel ));
-        cudaMalloc((void**)&dSobel, N * sizeof( pixel ));
- 
-        cudaMemcpy(dPi, pi, N * sizeof( pixel ), cudaMemcpyHostToDevice);
- 
-        dim3 threadsPerBlock(32,32); // blockDim.x, blockDim.y, blockDim.z
-        dim3 numBlocks(height/32+1, width/32+1); // +1 or not...
-        kernel_sobel_filter<<<numBlocks,threadsPerBlock>>>(dSobel, dPi, height, width);
- 
-        cudaMemcpy(sobel, dSobel, N * sizeof( pixel ), cudaMemcpyDeviceToHost);
-
-        for(j=1; j<height-1; j++)
-        {
-            for(k=1; k<width-1; k++)
-            {
-                pi[CONV(j  ,k  ,width)].r = sobel[CONV(j  ,k  ,width)].r ;
-                pi[CONV(j  ,k  ,width)].g = sobel[CONV(j  ,k  ,width)].g ;
-                pi[CONV(j  ,k  ,width)].b = sobel[CONV(j  ,k  ,width)].b ;
-            }
-        }
-
-        free (sobel) ;
+        sobel_filter_cuda(width, height, pi);
+       
 
     } else {
         // use OpenMP on entire picture

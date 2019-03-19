@@ -56,7 +56,7 @@ void apply_all_filters0_mode1(int * ws, int * hs, pixel ** p, int num_subimgs){
         apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
 
         /* Apply sobel filter on pixels */
-        apply_sobel_filter_omp(width, height, pi);
+        sobel_filter_auto(width, height, pi);
 
     }
 }

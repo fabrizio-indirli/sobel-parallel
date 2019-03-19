@@ -18,6 +18,8 @@ extern void apply_sobel_filter_omp(int width, int height, pixel * pi);
 
 extern void apply_sobel_filter_part(int width, int height, pixel * pi, int startheight, int finalheight);
 
+extern void sobel_filter_cuda(int width, int height, pixel * pi);
+
 extern void sobel_filter_auto(int width, int height, pixel * pi);
 
 extern void sobel_filter_part_auto(int width, int height, pixel * pi, int startheight, int finalheight);
