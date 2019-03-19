@@ -12,10 +12,10 @@
 #include <gif_lib.h>
 
 #define SOBELF_DEBUG 0
-#define LOGGING 0
+#define LOGGING 1
 
 #if LOGGING
-    #define FILE_NAME "./logs_plots/plog_ser.csv"
+    #define FILE_NAME "./logs_plots/plog_master_others.csv"
     FILE *fOut;
 
     void writeNumToLog(double n){
@@ -860,14 +860,7 @@ int main( int argc, char ** argv )
     struct timeval t1, t2;
     double duration ;
 
-     /*Open perfomance log file for debug*/
-    #if LOGGING
-        fOut = fopen(FILE_NAME,"a");
-        if(ftell(fOut)==0) //file is empty
-            fprintf(fOut, "n_subimgs,width,height,import_time,filters_time,export_time,");
-        newRow();
-    #endif
-
+    
     if ( argc < 3 )
     {
         fprintf( stderr, "Usage: %s input.gif output.gif \n", argv[0] ) ;
@@ -876,6 +869,15 @@ int main( int argc, char ** argv )
 
     input_filename = argv[1] ;
     output_filename = argv[2] ;
+
+     /*Open perfomance log file for debug*/
+    #if LOGGING
+        fOut = fopen(FILE_NAME,"a");
+        if(ftell(fOut)==0) //file is empty
+            fprintf(fOut, "filename,n_subimgs,width,height,import_time,filters_time,export_time,");
+        newRow();
+        fprintf(fOut, "%s,", input_filename);
+    #endif
 
     /* IMPORT Timer start */
     gettimeofday(&t1, NULL);
