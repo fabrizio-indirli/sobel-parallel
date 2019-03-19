@@ -1,5 +1,7 @@
 #include "mpi_mode_0.h"
 
+#define OMP_THRESHOLD 200000
+
 void compute_without_MPI(int num_nodes, animated_gif * image, int my_rank)
 {
     int i;
@@ -70,15 +72,29 @@ void compute_without_MPI(int num_nodes, animated_gif * image, int my_rank)
             height = image->height[i] ;
             pixel * pi = p[i];
 
+            if(width * height > OMP_THRESHOLD){
 
-            /*Apply grey filter: convert the pixels into grayscale */
-            apply_gray_filter_omp(width, height, pi);
+                /*Apply grey filter: convert the pixels into grayscale */
+                apply_gray_filter_omp(width, height, pi);
 
-            /*Apply blur filter with convergence value*/
-            apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
+                /*Apply blur filter with convergence value*/
+                apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
 
-            /* Apply sobel filter on pixels */
-            sobel_filter_auto(width, height, pi);
+                /* Apply sobel filter on pixels */
+                sobel_filter_auto(width, height, pi);
+            }
+            else {
+
+                /*Apply grey filter: convert the pixels into grayscale */
+                apply_gray_filter(width, height, pi);
+
+                /*Apply blur filter with convergence value*/
+                apply_blur_filter( width, height, pi, 5, 20 ) ;
+
+                /* Apply sobel filter on pixels */
+                apply_sobel_filter(width, height, pi);
+            }
+            
         }
     }
 

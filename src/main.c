@@ -32,7 +32,7 @@
 
 
 #if LOGGING
-    #define LOG_FILENAME "./logs_plots/plog_hybrid.csv"
+    #define LOG_FILENAME "./logs_plots/plog_hybrid_n4_N1-new4.csv"
 #endif
 
 int i, j;
@@ -47,7 +47,7 @@ int mpi_mode;
 #define MPI_PIXELS_THRESHOLD 800000
 
 // minimum number of avg pixels to use MPI on sub-images
-#define MPI_IMGS_THRESHOLD 400000
+#define MPI_IMGS_THRESHOLD 300000
 
 // info on GIF file
 int num_imgs = 0;
@@ -152,7 +152,7 @@ int main( int argc, char ** argv )
         long avg_size = avgSize(image->width, image->height, num_imgs);
         printf("Average size of images is %ld pixels\n", avg_size);
 
-        mpi_mode = selectMPImode(num_nodes, num_imgs, avg_size, MPI_PIXELS_THRESHOLD, MPI_IMGS_THRESHOLD);
+        mpi_mode = selectMPImode(num_nodes, num_imgs, avg_size, MPI_IMGS_THRESHOLD, MPI_PIXELS_THRESHOLD);
         printf("Selected MPI mode %d\n", mpi_mode);
         
 

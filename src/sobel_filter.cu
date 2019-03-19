@@ -4,6 +4,8 @@
 #define CONV(l,c,nb_c) \
     (l)*(nb_c)+(c)
 
+#define CUDA_THRESHOLD 800000
+
 
 __global__ void kernel_sobel_filter(pixel* sobel, pixel* pi, int height, int width)
 {
@@ -375,7 +377,7 @@ void sobel_filter_auto(int width, int height, pixel * pi){
 
     int j, k;
 
-    if(nDevices > 0 && thread_rank < 2){
+    if(nDevices > 0 && thread_rank < 2 && width*height > CUDA_THRESHOLD){
         // use CUDA if GPU is available
         sobel_filter_cuda(width, height, pi);
        
@@ -400,7 +402,7 @@ void sobel_filter_part_auto(int width, int height, pixel * pi, int startheight, 
 
     int j, k;
 
-    if(nDevices > 0 && thread_rank < 2){
+    if(nDevices > 0 && thread_rank < 2 && width*(startheight-finalheight) > CUDA_THRESHOLD){
         // use CUDA if GPU is available
 
         #if SOBEL_DBG
