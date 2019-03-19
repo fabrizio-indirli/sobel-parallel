@@ -25,14 +25,14 @@
 #include "mpi_mode_3.h"
 
 #define SOBELF_DEBUG 0
-#define LOGGING 0
+#define LOGGING 1
 #define EXPORT 1
 #define MPI_DEBUG 1
 #define GDB_DEBUG 0
 
 
 #if LOGGING
-    #define LOG_FILENAME "./logs_plots/plog_ser.csv"
+    #define LOG_FILENAME "./logs_plots/plog_hybrid.csv"
 #endif
 
 int i, j;
@@ -44,10 +44,10 @@ int num_nodes, my_rank;
 int mpi_mode;
 
 // minimum number of avg pixels to use MPI on pixels (parts of the image)
-#define MPI_PIXELS_THRESHOLD 1000
+#define MPI_PIXELS_THRESHOLD 300000
 
-// minimum number of avg pixels to use MPI on bug-images
-#define MPI_IMGS_THRESHOLD 1000
+// minimum number of avg pixels to use MPI on sub-images
+#define MPI_IMGS_THRESHOLD 400000
 
 // info on GIF file
 int num_imgs = 0;
@@ -137,10 +137,11 @@ int main( int argc, char ** argv )
         printf( "GIF loaded from file %s with %d image(s) in %lf s\n", 
                 input_filename, image->n_images, duration ) ;
         #if LOGGING
-            appendNumToRow(image->n_images, fOut);
-            appendNumToRow(image->width[0], fOut);
-            appendNumToRow(image->height[0], fOut);
-            appendNumToRow(duration, fOut);
+            newRowWithFilename(input_filename);
+            appendNumToRow(image->n_images);
+            appendNumToRow(image->width[0]);
+            appendNumToRow(image->height[0]);
+            appendNumToRow(duration);
         #endif
 
         p = image->p ;
@@ -203,7 +204,7 @@ int main( int argc, char ** argv )
     duration = (t2.tv_sec -t0.tv_sec)+((t2.tv_usec-t0.tv_usec)/1e6);
     printf( "All filters done in %lf s on %d sub-images\n", duration, num_imgs) ;
     #if LOGGING
-        appendNumToRow(duration, fOut);
+        appendNumToRow(duration);
     #endif
 
     #if EXPORT
@@ -219,7 +220,7 @@ int main( int argc, char ** argv )
         duration = (t2.tv_sec -t1.tv_sec)+((t2.tv_usec-t1.tv_usec)/1e6);
         printf( "Export done in %lf s in file %s\n\n", duration, output_filename ) ;
         #if LOGGING
-            appendNumToRow(duration, fOut);
+            appendNumToRow(duration);
         #endif
 
         /*Close perfomance log file*/

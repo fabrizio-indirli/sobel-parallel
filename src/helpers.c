@@ -58,7 +58,6 @@ void openLogFile(char * filename){
     fOut = fopen(filename,"a");
     if(ftell(fOut)==0) //file is empty
         fprintf(fOut, "filename,n_subimgs,width,height,import_time,filters_time,export_time,");
-    newRow(fOut);
 }
 
 // close log file
@@ -82,8 +81,8 @@ int selectMPImode(int num_nodes, int num_imgs, long avg_size, int imgs_threshold
                     // use MPI on different images
 
                     if(num_nodes > 2*num_imgs && avg_size > pixels_threshold){
-                        // use MPI also on pixels
-                        return 3;
+                        // TODO: use MPI also on pixels
+                        return 1;
                     }
                     else return 1;
 
