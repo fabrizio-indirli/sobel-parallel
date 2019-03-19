@@ -94,7 +94,7 @@ __global__ void kernel_sobel_filter_part(pixel* sobel, pixel* pi, int height, in
             val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
 
 
-            if ( val_blue > 50 ) 
+            if ( val_blue > 50 && j < finalheight - 2) 
             {
                 sobel[CONV(j  ,k  ,width)].r = 255 ;
                 sobel[CONV(j  ,k  ,width)].g = 255 ;
@@ -289,7 +289,7 @@ void apply_sobel_filter_part(int width, int height, pixel * pi, int startheight,
                     val_blue = sqrt(deltaX_blue * deltaX_blue + deltaY_blue * deltaY_blue)/4;
 
 
-                    if ( val_blue > 50 ) 
+                    if ( val_blue > 50 &&  j < finalheight - 1 && j > startheight + 1 ) 
                     {
                         sobel[CONV(j  ,k  ,width)].r = 255 ;
                         sobel[CONV(j  ,k  ,width)].g = 255 ;
