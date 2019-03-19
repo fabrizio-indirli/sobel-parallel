@@ -44,7 +44,7 @@ int num_nodes, my_rank;
 int mpi_mode;
 
 // minimum number of avg pixels to use MPI on pixels (parts of the image)
-#define MPI_PIXELS_THRESHOLD 300000
+#define MPI_PIXELS_THRESHOLD 800000
 
 // minimum number of avg pixels to use MPI on sub-images
 #define MPI_IMGS_THRESHOLD 400000
