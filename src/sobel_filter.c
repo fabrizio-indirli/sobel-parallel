@@ -122,7 +122,7 @@ void apply_sobel_filter_omp(int width, int height, pixel * pi){
             }
         }
 
-        #pragma omp for collapse(2) schedule(dynamic, width)
+        #pragma omp for collapse(2) schedule(static)
         for(j=1; j<height-1; j++)
         {
             for(k=1; k<width-1; k++)
