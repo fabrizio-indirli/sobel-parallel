@@ -59,7 +59,7 @@ apply_blur_filter( int width, int height, pixel * pi, int size, int threshold ) 
                 }
             }
    
-            #pragma omp for collapse(2) schedule(static,width) reduction(&&:end)
+            #pragma omp for collapse(2) schedule(dynamic,width) reduction(&&:end)
             for(j=1; j<height-1; j++)
             {
                 for(k=1; k<width-1; k++)

@@ -171,7 +171,7 @@ int main( int argc, char ** argv )
         // apply_blur_filter( width, height, pi, 5, 20 ) ;
 
         /* Apply sobel filter on pixels */
-        // apply_sobel_filter(width, height, pi);
+        apply_sobel_filter(width, height, pi);
 
     }
     #if LOG_FILTERS

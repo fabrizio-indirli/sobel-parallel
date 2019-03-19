@@ -15,7 +15,7 @@ void apply_sobel_filter(int width, int height, pixel * pi){
     {
         // `dynamic` can be a better choice, since there is an if statement that might invoke imbalance for the iteration.
         // Actually nope... static one is faster. 
-        #pragma omp for collapse(2) schedule(static) 
+        #pragma omp for collapse(2) schedule(dynamic,width) 
         for(j=1; j<height-1; j++)
         {
             for(k=1; k<width-1; k++)
@@ -60,7 +60,7 @@ void apply_sobel_filter(int width, int height, pixel * pi){
             }
         }
 
-        #pragma omp for collapse(2) schedule(static)
+        #pragma omp for collapse(2) schedule(dynamic,width)
         for(j=1; j<height-1; j++)
         {
             for(k=1; k<width-1; k++)
