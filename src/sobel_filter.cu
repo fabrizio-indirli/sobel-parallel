@@ -5,6 +5,7 @@
     (l)*(nb_c)+(c)
 
 #define CUDA_THRESHOLD 800000
+#define CUDA_MAX_THRESHOLD 2097151 // = 2147483647/1024
 
 
 __global__ void kernel_sobel_filter(pixel* sobel, pixel* pi, int height, int width)
@@ -377,7 +378,7 @@ void sobel_filter_auto(int width, int height, pixel * pi){
 
     int j, k;
 
-    if(nDevices > 0 && thread_rank < 2 && width*height > CUDA_THRESHOLD){
+    if(nDevices > 0 && thread_rank < 2 && width*height > CUDA_THRESHOLD && width*height < CUDA_MAX_THRESHOLD){
         // use CUDA if GPU is available
         printf("Using CUDA \n");
         sobel_filter_cuda(width, height, pi);
@@ -403,7 +404,7 @@ void sobel_filter_part_auto(int width, int height, pixel * pi, int startheight, 
 
     int j, k;
 
-    if(nDevices > 0 && thread_rank < 2 && width*(startheight-finalheight) > CUDA_THRESHOLD){
+    if(nDevices > 0 && thread_rank < 2 && width*(startheight-finalheight) > CUDA_THRESHOLD && width*height < CUDA_MAX_THRESHOLD){
         // use CUDA if GPU is available
 
         #if SOBEL_DBG
