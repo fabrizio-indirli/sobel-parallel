@@ -379,6 +379,7 @@ void sobel_filter_auto(int width, int height, pixel * pi){
 
     if(nDevices > 0 && thread_rank < 2 && width*height > CUDA_THRESHOLD){
         // use CUDA if GPU is available
+        printf("Using CUDA \n");
         sobel_filter_cuda(width, height, pi);
        
 

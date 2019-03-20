@@ -30,7 +30,7 @@ void compute_without_MPI(int num_nodes, animated_gif * image, int my_rank)
 
     
     
-    if (image->n_images > num_threads)
+    if (image->n_images > num_threads && 0)
     {
         // parallelized on num of images
         #pragma omp parallel default(none) private(i,width,height) shared(p,image)
@@ -81,7 +81,8 @@ void compute_without_MPI(int num_nodes, animated_gif * image, int my_rank)
                 apply_blur_filter_omp( width, height, pi, 5, 20 ) ;
 
                 /* Apply sobel filter on pixels */
-                sobel_filter_auto(width, height, pi);
+                //sobel_filter_auto(width, height, pi);
+                apply_sobel_filter(width, height, pi);
             }
             else {
 
