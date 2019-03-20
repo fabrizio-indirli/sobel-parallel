@@ -1,6 +1,6 @@
 #include "mpi_mode_1.h"
 
-#define IN_DEBUG 0
+#define IN_DEBUG 1
 
 int rank;
 
