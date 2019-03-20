@@ -2,7 +2,7 @@
 
 make
 
-INPUT_DIR=images/original
+INPUT_DIR=images/others
 OUTPUT_DIR=images/processed
 mkdir $OUTPUT_DIR 2>/dev/null
 
