@@ -1,3 +1,5 @@
 .vscode/
 .nfs*
 .ipynb_checkpoints
+images/others
+images/processed
