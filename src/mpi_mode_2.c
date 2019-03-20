@@ -1,6 +1,7 @@
 #include "mpi_mode_2.h"
 
 #define MIN_PIXELS_THRESHOLD 10000
+#define MPI_DEBUG 1
 
 void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,  
                     animated_gif * image, int my_rank)
@@ -126,9 +127,10 @@ void useMPIonPixels(MPI_Datatype mpi_pixel_type, int num_nodes,
         my_start_heights[j] = START_HEIGHT(j, my_rank);
     }
 
-    // printf("Rank %d, my_parts_heights: ", my_rank); printVector(my_part_heights, num_imgs);
-    // printf("Rank %d, my_start_heights: ", my_rank); printVector(my_start_heights, num_imgs);
-
+    #if MPI_DEBUG
+        printf("Rank %d, my_parts_heights: ", my_rank); printVector(my_part_heights, num_imgs);
+        printf("Rank %d, my_start_heights: ", my_rank); printVector(my_start_heights, num_imgs);
+    #endif
 
     int displs[num_imgs][num_nodes];
     int partsSizes[num_imgs][num_nodes];
