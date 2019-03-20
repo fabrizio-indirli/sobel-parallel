@@ -32,7 +32,7 @@
 
 
 #if LOGGING
-    #define LOG_FILENAME "./logs_plots/plog_hybrid_n4_N1-new4.csv"
+    #define LOG_FILENAME "./logs_plots/plog_hybrid_n4_N1-new5.csv"
 #endif
 
 int i, j;
@@ -44,10 +44,10 @@ int num_nodes, my_rank;
 int mpi_mode;
 
 // minimum number of avg pixels to use MPI on pixels (parts of the image)
-#define MPI_PIXELS_THRESHOLD 800000
+#define MPI_PIXELS_THRESHOLD 300000
 
 // minimum number of avg pixels to use MPI on sub-images
-#define MPI_IMGS_THRESHOLD 300000
+#define MPI_IMGS_THRESHOLD 800000
 
 // info on GIF file
 int num_imgs = 0;

@@ -1,4 +1,5 @@
-images/*
+images/original/*
+images/processed/*
 .vscode/c_cpp_properties.json
 .vscode/*
 .nfs*
