@@ -1,4 +1,9 @@
 .vscode/
 .nfs*
+<<<<<<< HEAD
 .ipynb_checkpoints
 
+=======
+images/others
+images/processed
+>>>>>>> 3973992a4e095ca0a18cf5c3d0c95758dacba90c
